@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planilla de Fumigación</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #1a5276, #2e86c1);
+    color: white; padding: 18px 30px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header .logo { font-size: 2rem; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+
+  .container { max-width: 1100px; margin: 28px auto; padding: 0 18px; }
+
+  .card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 24px; margin-bottom: 22px;
+  }
+  .card-title {
+    font-size: 1rem; font-weight: 700; color: #1a5276;
+    margin-bottom: 18px; padding-bottom: 10px;
+    border-bottom: 2px solid #d6eaf8;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+
+  /* Form */
+  .form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .form-group { flex: 1; min-width: 150px; }
+  .form-group label {
+    display: block; font-size: 0.78rem; font-weight: 600;
+    color: #5d6d7e; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+  }
+  .form-group input, .form-group select {
+    width: 100%; padding: 9px 12px;
+    border: 1.5px solid #d5d8dc; border-radius: 8px;
+    font-size: 0.93rem; color: #1a202c; background: #fff;
+    transition: border-color 0.2s; -webkit-appearance: none;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none; border-color: #2e86c1;
+    box-shadow: 0 0 0 3px rgba(46,134,193,0.15);
+  }
+
+  /* Lotes grid */
+  .lotes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .lote-card {
+    border: 2px solid #d5d8dc; border-radius: 10px;
+    padding: 10px 12px; cursor: pointer;
+    transition: all 0.18s; background: #fafcfe;
+    user-select: none; position: relative;
+  }
+  .lote-card:hover:not(.selected) { border-color: #2e86c1; background: #eaf4fb; }
+  .lote-card.selected { border-color: #1a5276; background: #d6eaf8; }
+  .lote-name { font-weight: 700; font-size: 0.95rem; color: #1a5276; }
+  .lote-ha { font-weight: 600; color: #27ae60; font-size: 0.82rem; }
+  .cultivo-badge {
+    display: inline-block; background: #eafaf1; color: #1e8449;
+    border-radius: 4px; padding: 1px 6px; font-size: 0.72rem;
+    font-weight: 700; margin-top: 4px; text-transform: uppercase;
+  }
+  .grupo-dot {
+    position: absolute; top: 7px; right: 8px;
+    width: 11px; height: 11px; border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+  }
+
+  /* Lotes con productos */
+  .lotes-productos { display: flex; flex-direction: column; gap: 18px; }
+
+  .lote-bloque { border: 2px solid #aed6f1; border-radius: 12px; overflow: hidden; }
+  .lote-bloque-header {
+    background: linear-gradient(135deg, #1a5276, #2e86c1);
+    color: white; padding: 11px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .lote-bloque-title { font-weight: 700; font-size: 1rem; }
+  .lote-bloque-meta { font-size: 0.82rem; opacity: 0.9; }
+  .lote-bloque-body { padding: 14px 16px; }
+
+  .grupo-tag-header {
+    background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 12px; padding: 3px 10px;
+    font-size: 0.76rem; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;
+  }
+
+  /* Toggle lock */
+  .lock-toggle {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.35);
+    border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600;
+    color: white; transition: all 0.18s; white-space: nowrap; user-select: none;
+  }
+  .lock-toggle:hover { background: rgba(255,255,255,0.28); }
+  .lock-toggle.locked { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.7); }
+  .lock-toggle input { display: none; }
+  .lock-icon { font-size: 0.9rem; }
+
+  /* Productos mini-tabla */
+  .prod-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .prod-table th {
+    background: #f4f8fb; color: #5d6d7e;
+    padding: 7px 10px; font-size: 0.76rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    text-align: left; border-bottom: 2px solid #d6eaf8;
+  }
+  .prod-table td {
+    padding: 6px 8px; border-bottom: 1px solid #ebedef;
+    vertical-align: middle; font-size: 0.88rem;
+  }
+  .prod-table tr:last-child td { border-bottom: none; }
+  .prod-table input[type=text], .prod-table input[type=number] {
+    width: 100%; padding: 5px 8px;
+    border: 1.5px solid #d5d8dc; border-radius: 6px; font-size: 0.86rem;
+  }
+  .prod-table input:focus {
+    outline: none; border-color: #2e86c1;
+    box-shadow: 0 0 0 2px rgba(46,134,193,0.12);
+  }
+  .prod-table select {
+    padding: 5px 6px; border: 1.5px solid #d5d8dc;
+    border-radius: 6px; font-size: 0.82rem; -webkit-appearance: none;
+  }
+  .prod-table td.total-cell {
+    font-weight: 700; color: #1a5276;
+    background: #eaf4fb; text-align: right;
+    font-family: 'Courier New', monospace; font-size: 0.9rem;
+    white-space: nowrap; min-width: 90px;
+  }
+  .prod-table td.btn-cell { width: 38px; text-align: center; }
+
+  .btn {
+    padding: 7px 14px; border: none; border-radius: 7px;
+    font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    transition: all 0.18s; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-add-prod {
+    background: #eaf4fb; color: #1a5276;
+    border: 1.5px solid #aed6f1; font-size: 0.82rem;
+  }
+  .btn-add-prod:hover { background: #d6eaf8; }
+  .btn-remove {
+    background: none; color: #e74c3c; border: none;
+    padding: 3px 7px; font-size: 1rem; cursor: pointer; border-radius: 5px;
+  }
+  .btn-remove:hover { background: #fde8e8; }
+  .btn-primary {
+    background: linear-gradient(135deg, #27ae60, #1e8449);
+    color: white; padding: 11px 28px; font-size: 1rem;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(39,174,96,0.35); }
+  .btn-secondary {
+    background: #eaf4fb; color: #1a5276;
+    border: 1.5px solid #aed6f1; padding: 9px 18px;
+  }
+  .btn-secondary:hover { background: #d6eaf8; }
+  .btn-confirmar {
+    background: linear-gradient(135deg, #1a5276, #2e86c1);
+    color: white; padding: 13px 32px; font-size: 1.05rem;
+    border-radius: 10px; box-shadow: 0 3px 12px rgba(26,82,118,0.3);
+    letter-spacing: 0.02em;
+  }
+  .btn-confirmar:hover {
+    transform: translateY(-2px); box-shadow: 0 6px 18px rgba(26,82,118,0.4);
+  }
+  .btn-confirmar:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .total-has-badge {
+    background: #1a5276; color: white; border-radius: 20px;
+    padding: 4px 14px; font-size: 0.85rem; font-weight: 700; margin-left: 10px;
+  }
+
+  /* Resumen global */
+  .resumen-prod-block { margin-bottom: 22px; }
+  .resumen-prod-titulo {
+    font-weight: 700; font-size: 0.97rem; color: #1a5276;
+    margin-bottom: 8px; padding: 8px 14px;
+    background: #d6eaf8; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .resumen-table { width: 100%; border-collapse: collapse; }
+  .resumen-table th {
+    background: #1a5276; color: white;
+    padding: 9px 12px; font-size: 0.78rem; font-weight: 600;
+    text-align: left; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .resumen-table td { padding: 8px 12px; border-bottom: 1px solid #ebedef; font-size: 0.88rem; }
+  .resumen-table td.num {
+    text-align: right; font-family: 'Courier New', monospace; font-size: 0.9rem;
+  }
+  .resumen-table tr.total-row td {
+    font-weight: 700; background: #d6eaf8; color: #1a5276;
+  }
+  .resumen-table tr:not(.total-row):hover td { background: #f4f8fb; }
+
+  /* Leyenda de grupos */
+  .leyenda-grupos {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+  }
+  .leyenda-item {
+    display: flex; align-items: center; gap: 6px;
+    background: #f4f8fb; border-radius: 8px; padding: 5px 12px;
+    font-size: 0.82rem; font-weight: 600; border: 1.5px solid #d5d8dc;
+  }
+  .leyenda-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Resumen por lote (matrix) */
+  .lotes-matrix-wrap { overflow-x: auto; margin-bottom: 22px; }
+  .lotes-matrix {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .lotes-matrix th {
+    background: #1a5276; color: white;
+    padding: 8px 10px; font-size: 0.78rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.03em;
+    text-align: center; border-right: 1px solid rgba(255,255,255,0.15);
+  }
+  .lotes-matrix th.th-lote { text-align: left; }
+  .lotes-matrix td {
+    padding: 7px 10px; border-bottom: 1px solid #ebedef;
+    border-right: 1px solid #ebedef; text-align: center;
+  }
+  .lotes-matrix td.td-lote { text-align: left; font-weight: 700; }
+  .lotes-matrix td.td-ha   { font-weight: 600; color: #27ae60; }
+  .lotes-matrix td.td-cult { color: #5d6d7e; font-size: 0.8rem; }
+  .lotes-matrix td.td-dash { color: #ccc; }
+  .lotes-matrix td.td-dose { font-family:'Courier New',monospace; font-weight:600; color:#1a5276; }
+  .lotes-matrix tr.total-row td {
+    background: #1a5276; color: white; font-weight: 700; border-color: #154360;
+  }
+  .lotes-matrix tr:not(.total-row):hover td { background: #f4f8fb; }
+  .matrix-section-title {
+    font-size: 0.95rem; font-weight: 700; color: #1a5276;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Ajuste de envases */
+  .envase-box {
+    margin-top: 14px; background: #f4f9ff;
+    border: 1.5px solid #aed6f1; border-radius: 10px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .envase-top-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .envase-label { font-size: 0.81rem; font-weight: 600; color: #5d6d7e; white-space: nowrap; }
+  .envase-input {
+    width: 76px; padding: 6px 8px;
+    border: 1.5px solid #aed6f1; border-radius: 7px;
+    font-size: 0.92rem; font-weight: 700; text-align: center; color: #1a5276;
+  }
+  .envase-input:focus { outline: none; border-color: #2e86c1; box-shadow: 0 0 0 2px rgba(46,134,193,0.15); }
+  .total-actual-chip {
+    background: #e8f0fe; color: #1a3a6b; border-radius: 20px;
+    padding: 4px 12px; font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+  }
+
+  /* Dos columnas de opciones */
+  .opciones-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .opcion-envase {
+    flex: 1; min-width: 190px; border-radius: 9px;
+    padding: 11px 14px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .opcion-up   { background: #eaf4fb; border: 1.5px solid #aed6f1; }
+  .opcion-down { background: #eafaf1; border: 1.5px solid #a9dfbf; }
+  .opcion-exact{ background: #f0f9f0; border: 1.5px solid #a9dfbf; }
+  .opcion-header {
+    font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 2px;
+  }
+  .opcion-up   .opcion-header { color: #1a5276; }
+  .opcion-down .opcion-header { color: #1e8449; }
+  .opcion-exact .opcion-header { color: #1e8449; }
+  .opcion-num { font-size: 0.92rem; font-weight: 700; color: #1a202c; }
+  .opcion-pct { font-size: 0.82rem; font-weight: 600; }
+  .pct-up   { color: #9a6005; }
+  .pct-down { color: #1e8449; }
+  .pct-exact{ color: #1e8449; }
+  .dosis-por-lote {
+    margin: 2px 0 4px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .dosis-lote-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.8rem; padding: 2px 6px; border-radius: 5px; background: rgba(255,255,255,0.6);
+  }
+  .dosis-lote-id  { color: #5d6d7e; font-weight: 600; }
+  .dosis-lote-val { font-weight: 700; color: #1a202c; font-family: 'Courier New', monospace; font-size: 0.82rem; }
+  .btn-opcion {
+    width: 100%; padding: 7px; border: none; border-radius: 7px;
+    font-size: 0.83rem; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; margin-top: 2px;
+  }
+  .btn-opcion:hover { transform: translateY(-1px); }
+  .btn-opcion.aplicado { opacity: 0.8; }
+  .btn-up    { background: #1a5276; color: white; }
+  .btn-up:hover    { background: #154360; }
+  .btn-down  { background: #1e8449; color: white; }
+  .btn-down:hover  { background: #196f3d; }
+  .btn-exact { background: #27ae60; color: white; cursor: default; }
+
+  .empty-msg { text-align: center; color: #aaa; font-style: italic; padding: 24px; font-size: 0.9rem; }
+  .actions-row { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+  .step-hint {
+    background: #eaf4fb; border-left: 4px solid #2e86c1;
+    border-radius: 0 8px 8px 0; padding: 10px 14px;
+    font-size: 0.85rem; color: #1a5276; margin-bottom: 16px;
+  }
+
+  @media print {
+    body { background: white; }
+    .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
+    .btn, .btn-remove, .btn-add-prod, .actions-row, .step-hint, .lock-toggle { display: none !important; }
+    header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .lote-bloque { page-break-inside: avoid; }
+    .lote-bloque-header { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🌾</div>
+  <div>
+    <h1>Planilla de Aplicación de Herbicidas</h1>
+    <p>Las Lomas — Productos por lote con cálculo automático de totales</p>
+  </div>
+  <div style="margin-left:auto;text-align:right;flex-shrink:0">
+    <div style="font-family:system-ui,-apple-system,Arial,sans-serif;font-size:11px;font-weight:500;color:#C9A200;letter-spacing:5px;margin-bottom:3px">AGRO</div>
+    <div style="display:flex;align-items:center;gap:5px;justify-content:flex-end">
+      <span style="font-family:system-ui,-apple-system,Arial,sans-serif;font-size:22px;font-weight:500;color:#fff;letter-spacing:1px;line-height:1">RAIMONDI</span>
+      <svg width="20" height="22" viewBox="0 0 24 26" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.9">
+        <line x1="12" y1="25" x2="12" y2="5"/>
+        <path d="M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7"/>
+        <path d="M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7"/>
+        <path d="M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13"/>
+        <path d="M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13"/>
+        <path d="M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19"/>
+        <path d="M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19"/>
+      </svg>
+    </div>
+    <div style="border-top:0.5px solid rgba(255,255,255,.3);margin-top:3px;padding-top:3px;font-family:system-ui,-apple-system,Arial,sans-serif;font-size:8px;color:rgba(255,255,255,.75);letter-spacing:1.5px">ASESORAMIENTO AGROPECUARIO</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Info general -->
+  <div class="card">
+    <div class="card-title">📋 Datos de la Aplicación</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="fecha" />
+      </div>
+      <div class="form-group">
+        <label>Tipo de Aplicación</label>
+        <select id="tipoAplicacion">
+          <option>TERRESTRE</option>
+          <option>AVIÓN</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Operador / Empresa</label>
+        <input type="text" id="operador" placeholder="Nombre del operador" />
+      </div>
+      <div class="form-group">
+        <label>Observaciones</label>
+        <input type="text" id="observaciones" placeholder="Notas adicionales" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Paso 1 -->
+  <div class="card">
+    <div class="card-title">
+      1️⃣ Seleccioná los lotes a fumigar
+      <span id="totalHasBadge" class="total-has-badge" style="display:none">0 ha</span>
+    </div>
+    <div class="step-hint">Hacé clic en uno o varios lotes. Los lotes con la misma receta se colorean iguales.</div>
+    <div class="lotes-grid" id="lotesGrid"></div>
+  </div>
+
+  <!-- Paso 2 -->
+  <div class="card" id="cardProductos" style="display:none">
+    <div class="card-title">2️⃣ Productos por lote</div>
+    <div class="step-hint">
+      Cargá productos y dosis para cada lote. Cuando dos o más lotes queden con la misma receta, se colorean iguales y aparece el candado
+      <strong>🔒 Fijar grupo</strong> — activalo para que los cambios se apliquen a todos los lotes del grupo a la vez.
+    </div>
+    <div class="lotes-productos" id="lotesProductosContainer"></div>
+  </div>
+
+  <!-- Resumen automático -->
+  <div class="card" id="cardResumen" style="display:none">
+    <div class="card-title">📊 Resumen de productos</div>
+    <div id="leyendaGrupos"></div>
+    <div id="resumenContainer"></div>
+  </div>
+
+  <!-- Confirmar -->
+  <div class="card" style="text-align:center; padding: 30px 24px;">
+    <div style="margin-bottom:12px; font-size:0.88rem; color:#5d6d7e;">
+      Revisá el resumen y cuando todo esté listo, confirmá para guardar el PDF.
+    </div>
+    <button class="btn btn-confirmar" id="btnConfirmar" onclick="generarPDF()">
+      ✅ Confirmar y guardar PDF
+    </button>
+    <div id="pdfStatus" style="margin-top:14px; font-size:0.85rem; color:#27ae60; display:none; font-weight:600;"></div>
+  </div>
+
+  <!-- Acciones secundarias -->
+  <div class="card" style="padding:16px 24px;">
+    <div class="actions-row">
+      <button class="btn btn-secondary" onclick="limpiarTodo()">🗑 Limpiar todo</button>
+      <button class="btn btn-secondary" onclick="window.print()">🖨 Imprimir</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =============================================
+// PALETA DE COLORES
+// =============================================
+const COLOR_GROUPS = [
+  { header:'linear-gradient(135deg,#8e44ad,#6c3483)', cardBg:'#f5eef8', border:'#9b59b6', dot:'#9b59b6', label:'A' },
+  { header:'linear-gradient(135deg,#16a085,#117a65)', cardBg:'#e8f8f5', border:'#1abc9c', dot:'#17a589', label:'B' },
+  { header:'linear-gradient(135deg,#e67e22,#b7770d)', cardBg:'#fef6e7', border:'#f0a500', dot:'#e67e22', label:'C' },
+  { header:'linear-gradient(135deg,#c0392b,#922b21)', cardBg:'#fdedec', border:'#e74c3c', dot:'#c0392b', label:'D' },
+  { header:'linear-gradient(135deg,#2980b9,#1a5276)', cardBg:'#eaf3fb', border:'#3498db', dot:'#2980b9', label:'E' },
+  { header:'linear-gradient(135deg,#27ae60,#1e6e3c)', cardBg:'#eafaf1', border:'#2ecc71', dot:'#27ae60', label:'F' },
+  { header:'linear-gradient(135deg,#d35400,#7e3c0a)', cardBg:'#fdf2e9', border:'#e59866', dot:'#d35400', label:'G' },
+  { header:'linear-gradient(135deg,#2471a3,#1a3a6b)', cardBg:'#eaf2ff', border:'#5dade2', dot:'#2471a3', label:'H' },
+];
+
+// =============================================
+// DATOS DE LOTES
+// =============================================
+const LOTES = [
+  { id:'2 somero',   ha:14,  cultivo:'PP' },
+  { id:'2 profundo', ha:50,  cultivo:'Girasol' },
+  { id:'3 somero',   ha:54,  cultivo:'PP' },
+  { id:'3 profundo', ha:26,  cultivo:'Maíz' },
+  { id:'4',          ha:55,  cultivo:'Girasol' },
+  { id:'5',          ha:57,  cultivo:'CB / Soja 2da' },
+  { id:'6',          ha:33,  cultivo:'Maíz' },
+  { id:'7',          ha:29,  cultivo:'Soja' },
+  { id:'8',          ha:22,  cultivo:'Maíz' },
+  { id:'9 B',        ha:22,  cultivo:'CB / Soja 2da' },
+  { id:'9 A',        ha:14,  cultivo:'Soja' },
+  { id:'10',         ha:52,  cultivo:'CB / Soja 2da' },
+  { id:'11',         ha:62,  cultivo:'Girasol' },
+  { id:'12',         ha:65,  cultivo:'Maíz' },
+  { id:'13',         ha:49,  cultivo:'Trigo / Vi' },
+  { id:'14',         ha:53,  cultivo:'Maíz' },
+  { id:'15',         ha:29,  cultivo:'CB / Soja 2da' },
+  { id:'16',         ha:46,  cultivo:'Soja' },
+  { id:'16B',        ha:15,  cultivo:'Soja' },
+];
+
+const PRODUCTOS_SUGERIDOS = [
+  'Glifosato','2,4-D Etil Hexílico','Heat','Pyroxasulfone',
+  'Cletodim','Corrector (Rizospray)','Nuprogram Extremo',
+];
+const UNIDADES = ['L/ha','kg/ha','cc/ha','g/ha'];
+
+// =============================================
+// ESTADO
+// =============================================
+let selectedLotes    = new Set();
+let productosPorlote = {};   // { loteId: [{nombre,dosis,unidad}] }
+let lockedGroups     = new Set(); // Set de labels de grupos fijados ('A','B',...)
+let envaseSize       = {};   // { eKey: number } tamaño de envase por producto
+let envaseProdMeta   = {};   // { eKey: {nombre, unidad, total, totalHa, lotes} }
+let acceptedTotals   = {};   // { eKey: total } — total exacto aceptado por el usuario (evita recalcular con decimales)
+
+// =============================================
+// INIT
+// =============================================
+function init() {
+  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+  renderLotes();
+}
+
+// =============================================
+// GRILLA DE LOTES
+// =============================================
+function renderLotes() {
+  const grid = document.getElementById('lotesGrid');
+  grid.innerHTML = '';
+  LOTES.forEach(lote => {
+    const div = document.createElement('div');
+    div.className = 'lote-card' + (selectedLotes.has(lote.id) ? ' selected' : '');
+    div.dataset.loteId = lote.id;
+    div.innerHTML = `
+      <div class="lote-name">Lote ${lote.id}</div>
+      <div class="lote-ha">${lote.ha} ha</div>
+      <div><span class="cultivo-badge">${lote.cultivo}</span></div>
+    `;
+    div.onclick = () => toggleLote(lote.id);
+    grid.appendChild(div);
+  });
+  updateBadge();
+  setTimeout(applyColors, 0);
+}
+
+function toggleLote(id) {
+  if (selectedLotes.has(id)) {
+    selectedLotes.delete(id);
+    delete productosPorlote[id];
+  } else {
+    selectedLotes.add(id);
+    productosPorlote[id] = [{ nombre:'', dosis:'', unidad:'L/ha' }];
+  }
+  renderLotes();
+  renderLotesProductos();
+}
+
+function updateBadge() {
+  const totalHa = LOTES.filter(l => selectedLotes.has(l.id)).reduce((s,l) => s+l.ha, 0);
+  const badge = document.getElementById('totalHasBadge');
+  if (selectedLotes.size > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = `${selectedLotes.size} lotes · ${totalHa} ha`;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// =============================================
+// COLORES Y GRUPOS
+// =============================================
+function getLoteSignature(loteId) {
+  const prods = productosPorlote[loteId] || [];
+  const filled = prods
+    .filter(p => p.nombre && p.nombre.trim() && p.dosis && parseFloat(p.dosis) > 0)
+    .map(p => `${p.nombre.trim().toLowerCase()}:${parseFloat(p.dosis).toFixed(4)}:${p.unidad}`)
+    .sort();
+  return filled.length > 0 ? filled.join('|') : null;
+}
+
+// Returns { loteId -> colorConfig } only for groups with 2+ lots
+function computeColorMap() {
+  const sigMap = {};
+  selectedLotes.forEach(id => {
+    const sig = getLoteSignature(id);
+    if (!sig) return;
+    if (!sigMap[sig]) sigMap[sig] = [];
+    sigMap[sig].push(id);
+  });
+  const colorMap = {};
+  let ci = 0;
+  Object.values(sigMap).forEach(group => {
+    if (group.length >= 2) {
+      const color = COLOR_GROUPS[ci++ % COLOR_GROUPS.length];
+      group.forEach(id => { colorMap[id] = color; });
+    }
+  });
+  return colorMap;
+}
+
+// Returns all loteIds in the same color group as loteId (excluding itself)
+function getGroupPeers(loteId, colorMap) {
+  const color = colorMap[loteId];
+  if (!color) return [];
+  return [...selectedLotes].filter(id => id !== loteId && colorMap[id] && colorMap[id].label === color.label);
+}
+
+function applyColors() {
+  const colorMap = computeColorMap();
+
+  // Lote cards
+  document.querySelectorAll('.lote-card[data-lote-id]').forEach(card => {
+    const id = card.dataset.loteId;
+    const color = colorMap[id];
+    const oldDot = card.querySelector('.grupo-dot');
+    if (oldDot) oldDot.remove();
+
+    if (color && selectedLotes.has(id)) {
+      card.style.borderColor = color.border;
+      card.style.background  = color.cardBg;
+      const dot = document.createElement('span');
+      dot.className = 'grupo-dot';
+      dot.title = `Grupo ${color.label}`;
+      dot.style.background = color.dot;
+      card.appendChild(dot);
+    } else if (selectedLotes.has(id)) {
+      card.style.borderColor = '#1a5276';
+      card.style.background  = '#d6eaf8';
+    } else {
+      card.style.borderColor = card.style.background = '';
+    }
+  });
+
+  // Bloque headers
+  selectedLotes.forEach(id => {
+    const bloque = document.getElementById(`bloque-${safeId(id)}`);
+    if (!bloque) return;
+    const header = bloque.querySelector('.lote-bloque-header');
+    const color  = colorMap[id];
+
+    // Remove old decorations
+    header.querySelectorAll('.grupo-tag-header,.lock-toggle').forEach(el => el.remove());
+
+    if (color) {
+      header.style.background = color.header;
+
+      // Grupo tag
+      const tag = document.createElement('span');
+      tag.className = 'grupo-tag-header';
+      tag.textContent = `Grupo ${color.label}`;
+      header.appendChild(tag);
+
+      // Lock toggle — solo en el primer lote del grupo para no duplicar
+      const groupIds = [...selectedLotes].filter(x => colorMap[x] && colorMap[x].label === color.label);
+      if (groupIds[0] === id) {
+        const isLocked = lockedGroups.has(color.label);
+        const lbl = document.createElement('label');
+        lbl.className = 'lock-toggle' + (isLocked ? ' locked' : '');
+        lbl.title = isLocked ? 'Grupo fijado: los cambios se replican a todos los lotes del grupo' : 'Fijar grupo para sincronizar cambios';
+        lbl.innerHTML = `
+          <input type="checkbox" ${isLocked ? 'checked' : ''} onchange="toggleGroupLock('${color.label}', this.checked)">
+          <span class="lock-icon">${isLocked ? '🔒' : '🔓'}</span>
+          <span>${isLocked ? 'Grupo fijado' : 'Fijar grupo'}</span>
+        `;
+        header.appendChild(lbl);
+      }
+    } else {
+      header.style.background = 'linear-gradient(135deg,#1a5276,#2e86c1)';
+    }
+  });
+
+  // Actualizar resumen
+  renderResumen(colorMap);
+}
+
+function toggleGroupLock(label, checked) {
+  if (checked) {
+    lockedGroups.add(label);
+  } else {
+    lockedGroups.delete(label);
+  }
+  applyColors();
+}
+
+// =============================================
+// RENDER BLOQUES DE PRODUCTOS
+// =============================================
+function renderLotesProductos() {
+  const container = document.getElementById('lotesProductosContainer');
+  const card = document.getElementById('cardProductos');
+  if (selectedLotes.size === 0) {
+    card.style.display = 'none';
+    document.getElementById('cardResumen').style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  container.innerHTML = '';
+
+  LOTES.filter(l => selectedLotes.has(l.id)).forEach(lote => {
+    const prods = productosPorlote[lote.id] || [];
+    const bloque = document.createElement('div');
+    bloque.className = 'lote-bloque';
+    bloque.id = `bloque-${safeId(lote.id)}`;
+    const filas = prods.map((p, i) => buildProdRow(lote.id, i, p)).join('');
+    bloque.innerHTML = `
+      <div class="lote-bloque-header">
+        <div>
+          <div class="lote-bloque-title">Lote ${lote.id}</div>
+          <div class="lote-bloque-meta">${lote.ha} ha · ${lote.cultivo}</div>
+        </div>
+      </div>
+      <div class="lote-bloque-body">
+        <table class="prod-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th style="width:120px">Dosis / ha</th>
+              <th style="width:80px">Unidad</th>
+              <th style="width:110px;text-align:right">Total</th>
+              <th style="width:38px"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody-${safeId(lote.id)}">${filas}</tbody>
+        </table>
+        <button class="btn btn-add-prod" onclick="agregarProducto('${lote.id}')">＋ Agregar producto</button>
+      </div>
+    `;
+    container.appendChild(bloque);
+  });
+
+  setTimeout(applyColors, 0);
+}
+
+function buildProdRow(loteId, idx, prod) {
+  const lote  = LOTES.find(l => l.id === loteId);
+  const total = (prod.dosis !== '' && !isNaN(prod.dosis) && parseFloat(prod.dosis) > 0)
+    ? (parseFloat(prod.dosis) * lote.ha).toFixed(2) + ' ' + prod.unidad.split('/')[0]
+    : '—';
+  const sid = safeId(loteId);
+  const sugeridos = PRODUCTOS_SUGERIDOS.map(s =>
+    `<option value="${s}"${prod.nombre===s?' selected':''}>${s}</option>`).join('');
+  const unidOpts = UNIDADES.map(u =>
+    `<option${prod.unidad===u?' selected':''}>${u}</option>`).join('');
+
+  return `
+    <tr id="row-${sid}-${idx}">
+      <td>
+        <input list="sug-${sid}-${idx}" type="text" value="${prod.nombre}"
+          placeholder="Nombre del producto"
+          onchange="setProd('${loteId}',${idx},'nombre',this.value)"
+          oninput="setProd('${loteId}',${idx},'nombre',this.value)" />
+        <datalist id="sug-${sid}-${idx}">${sugeridos}</datalist>
+      </td>
+      <td>
+        <input type="number" value="${prod.dosis}" placeholder="0.000"
+          step="0.001" min="0"
+          onchange="setProd('${loteId}',${idx},'dosis',this.value)"
+          oninput="setProd('${loteId}',${idx},'dosis',this.value)" />
+      </td>
+      <td><select onchange="setProd('${loteId}',${idx},'unidad',this.value)">${unidOpts}</select></td>
+      <td class="total-cell">${total}</td>
+      <td class="btn-cell">
+        <button class="btn-remove" onclick="eliminarProducto('${loteId}',${idx})" title="Eliminar">✕</button>
+      </td>
+    </tr>
+  `;
+}
+
+// =============================================
+// EDICIÓN DE PRODUCTOS
+// =============================================
+function setProd(loteId, idx, campo, valor) {
+  if (!productosPorlote[loteId]) return;
+  productosPorlote[loteId][idx][campo] = valor;
+  acceptedTotals = {}; // Al editar manualmente, resetear ajustes aceptados
+  refreshTotalCell(loteId, idx);
+
+  // Propagar si el grupo está fijado
+  const colorMap = computeColorMap();
+  const color = colorMap[loteId];
+  if (color && lockedGroups.has(color.label)) {
+    getGroupPeers(loteId, colorMap).forEach(peerId => {
+      if (!productosPorlote[peerId] || !productosPorlote[peerId][idx]) return;
+      productosPorlote[peerId][idx][campo] = valor;
+      patchRowDOM(peerId, idx, campo, valor);
+      refreshTotalCell(peerId, idx);
+    });
+  }
+
+  applyColors();
+}
+
+function agregarProducto(loteId) {
+  if (!productosPorlote[loteId]) productosPorlote[loteId] = [];
+  const newProd = { nombre:'', dosis:'', unidad:'L/ha' };
+  productosPorlote[loteId].push({ ...newProd });
+
+  // Propagar si grupo fijado
+  const colorMap = computeColorMap();
+  const color = colorMap[loteId];
+  if (color && lockedGroups.has(color.label)) {
+    getGroupPeers(loteId, colorMap).forEach(peerId => {
+      if (productosPorlote[peerId]) productosPorlote[peerId].push({ ...newProd });
+    });
+  }
+
+  renderLotesProductos();
+  setTimeout(() => {
+    const tbody = document.getElementById(`tbody-${safeId(loteId)}`);
+    if (tbody) {
+      const inputs = tbody.querySelectorAll('input[type=text]');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }
+  }, 60);
+}
+
+function eliminarProducto(loteId, idx) {
+  productosPorlote[loteId].splice(idx, 1);
+  if (productosPorlote[loteId].length === 0)
+    productosPorlote[loteId].push({ nombre:'', dosis:'', unidad:'L/ha' });
+
+  // Propagar si grupo fijado
+  const colorMap = computeColorMap();
+  const color = colorMap[loteId];
+  if (color && lockedGroups.has(color.label)) {
+    getGroupPeers(loteId, colorMap).forEach(peerId => {
+      if (!productosPorlote[peerId]) return;
+      productosPorlote[peerId].splice(idx, 1);
+      if (productosPorlote[peerId].length === 0)
+        productosPorlote[peerId].push({ nombre:'', dosis:'', unidad:'L/ha' });
+    });
+  }
+
+  renderLotesProductos();
+}
+
+// Actualiza la celda total en el DOM sin perder foco
+function refreshTotalCell(loteId, idx) {
+  const lote = LOTES.find(l => l.id === loteId);
+  const prod = (productosPorlote[loteId] || [])[idx];
+  if (!lote || !prod) return;
+  const row = document.getElementById(`row-${safeId(loteId)}-${idx}`);
+  if (!row) return;
+  const dosis = parseFloat(prod.dosis);
+  row.querySelector('.total-cell').textContent =
+    (!isNaN(dosis) && dosis > 0)
+      ? (dosis * lote.ha).toFixed(2) + ' ' + prod.unidad.split('/')[0]
+      : '—';
+}
+
+// Parchea un campo en el DOM de otro lote (para propagación)
+function patchRowDOM(loteId, idx, campo, valor) {
+  const row = document.getElementById(`row-${safeId(loteId)}-${idx}`);
+  if (!row) return;
+  if (campo === 'nombre') {
+    const inp = row.querySelector('input[type=text]');
+    if (inp) inp.value = valor;
+  } else if (campo === 'dosis') {
+    const inp = row.querySelector('input[type=number]');
+    if (inp) inp.value = valor;
+  } else if (campo === 'unidad') {
+    const sel = row.querySelector('select');
+    if (sel) sel.value = valor;
+  }
+}
+
+// =============================================
+// RESUMEN AUTOMÁTICO
+// =============================================
+function eKey(nombre, unidad) {
+  return (nombre + '||' + unidad).replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function renderResumen(colorMap) {
+  if (!colorMap) colorMap = computeColorMap();
+  const container  = document.getElementById('resumenContainer');
+  const cardResumen= document.getElementById('cardResumen');
+  const leyendaEl  = document.getElementById('leyendaGrupos');
+
+  // Mapa de totales por producto
+  const mapa = {};
+  LOTES.filter(l => selectedLotes.has(l.id)).forEach(lote => {
+    (productosPorlote[lote.id] || []).forEach(p => {
+      if (!p.nombre || !p.dosis || isNaN(parseFloat(p.dosis)) || parseFloat(p.dosis) <= 0) return;
+      const k = eKey(p.nombre.trim(), p.unidad);
+      if (!mapa[k]) mapa[k] = { nombre: p.nombre.trim(), unidad: p.unidad, lotes: [], total: 0 };
+      const sub = parseFloat(p.dosis) * lote.ha;
+      mapa[k].lotes.push({ loteId:lote.id, ha:lote.ha, cultivo:lote.cultivo, dosis:parseFloat(p.dosis), subtotal:sub });
+      mapa[k].total += sub;
+    });
+  });
+
+  const productos = Object.values(mapa);
+  if (productos.length === 0) { cardResumen.style.display = 'none'; return; }
+  cardResumen.style.display = 'block';
+
+  // Guardar meta para aceptarAjuste
+  envaseProdMeta = {};
+  productos.forEach(prod => {
+    const k = eKey(prod.nombre, prod.unidad);
+    envaseProdMeta[k] = { ...prod, totalHa: prod.lotes.reduce((s,l) => s+l.ha, 0) };
+  });
+
+  // Leyenda grupos
+  const gruposActivos = {};
+  Object.entries(colorMap).forEach(([id, color]) => {
+    if (!gruposActivos[color.label]) gruposActivos[color.label] = { color, lotes: [] };
+    gruposActivos[color.label].lotes.push(id);
+  });
+  leyendaEl.innerHTML = Object.values(gruposActivos).length
+    ? `<div class="leyenda-grupos">${Object.values(gruposActivos).map(g => `
+        <div class="leyenda-item">
+          <span class="leyenda-dot" style="background:${g.color.dot}"></span>
+          <span>Grupo ${g.color.label}: ${g.lotes.map(id=>'Lote '+id).join(', ')}</span>
+          ${lockedGroups.has(g.color.label) ? '<span style="margin-left:4px">🔒</span>' : ''}
+        </div>`).join('')}
+      </div>` : '';
+
+  // ── Matriz resumen por lote ──────────────────────────────
+  const lotesSelec = LOTES.filter(l => selectedLotes.has(l.id));
+
+  // Columnas = productos únicos en orden de aparición
+  const prodCols = []; // [ {nombre, unidad} ]
+  const prodColKeys = new Set();
+  lotesSelec.forEach(lote => {
+    (productosPorlote[lote.id] || []).forEach(p => {
+      if (!p.nombre || !p.dosis || parseFloat(p.dosis) <= 0) return;
+      const k = p.nombre.trim() + '|||' + p.unidad;
+      if (!prodColKeys.has(k)) { prodColKeys.add(k); prodCols.push({ nombre: p.nombre.trim(), unidad: p.unidad }); }
+    });
+  });
+
+  if (prodCols.length > 0) {
+    const thProds = prodCols.map(pc =>
+      `<th title="${pc.unidad}">${pc.nombre}<br><span style="font-weight:400;opacity:0.75;font-size:0.7rem">${pc.unidad}</span></th>`
+    ).join('');
+
+    const filasTotalesHa = new Array(prodCols.length).fill(0); // suma ha×dosis por columna
+
+    const filas = lotesSelec.map(lote => {
+      const color   = colorMap[lote.id];
+      const dot     = color
+        ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color.dot};margin-right:6px;vertical-align:middle;flex-shrink:0"></span>`
+        : '';
+
+      // Construir mapa rápido dosis para este lote
+      const dosisMap = {};
+      (productosPorlote[lote.id] || []).forEach(p => {
+        if (!p.nombre || !p.dosis || parseFloat(p.dosis) <= 0) return;
+        dosisMap[p.nombre.trim() + '|||' + p.unidad] = parseFloat(p.dosis);
+      });
+
+      const celdas = prodCols.map((pc, ci) => {
+        const k2   = pc.nombre + '|||' + pc.unidad;
+        const d    = dosisMap[k2];
+        if (d !== undefined) {
+          filasTotalesHa[ci] += d * lote.ha;
+          return `<td class="td-dose">${d.toFixed(3)}</td>`;
+        }
+        return `<td class="td-dash">—</td>`;
+      }).join('');
+
+      return `<tr>
+        <td class="td-lote">${dot}Lote ${lote.id}</td>
+        <td class="td-ha">${lote.ha}</td>
+        <td class="td-cult">${lote.cultivo}</td>
+        ${celdas}
+      </tr>`;
+    }).join('');
+
+    const totalHaAll = lotesSelec.reduce((s,l) => s+l.ha, 0);
+    const celdasTotales = prodCols.map((pc, ci) =>
+      `<td>${filasTotalesHa[ci].toFixed(1)} ${pc.unidad.split('/')[0]}</td>`
+    ).join('');
+
+    container.innerHTML = `
+      <div class="matrix-section-title">📋 Resumen por lote</div>
+      <div class="lotes-matrix-wrap">
+        <table class="lotes-matrix">
+          <thead><tr>
+            <th class="th-lote">Lote</th>
+            <th>Ha</th>
+            <th>Cultivo</th>
+            ${thProds}
+          </tr></thead>
+          <tbody>
+            ${filas}
+            <tr class="total-row">
+              <td>TOTAL</td>
+              <td>${totalHaAll}</td>
+              <td>—</td>
+              ${celdasTotales}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <hr style="border:none;border-top:2px solid #d6eaf8;margin:6px 0 20px">
+    `;
+  } else {
+    container.innerHTML = '';
+  }
+
+  // Tablas por producto + sección envase
+  let html = '';
+  productos.forEach(prod => {
+    const k        = eKey(prod.nombre, prod.unidad);
+    const totalHa  = prod.lotes.reduce((s,l) => s+l.ha, 0);
+    const envase   = envaseSize[k] !== undefined ? envaseSize[k] : 20;
+    const unidS    = prod.unidad.split('/')[0];
+    // Usar total aceptado si existe (evita mostrar 279.99 cuando el usuario aceptó 280)
+    const displayTotal = acceptedTotals[k] !== undefined ? acceptedTotals[k] : prod.total;
+
+    const filas = prod.lotes.map(l => {
+      const color = colorMap[l.loteId];
+      const dot   = color
+        ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color.dot};margin-right:6px;vertical-align:middle"></span>`
+        : '';
+      return `<tr>
+        <td>${dot}Lote ${l.loteId}</td>
+        <td>${l.cultivo}</td>
+        <td class="num">${l.ha}</td>
+        <td class="num">${l.dosis.toFixed(3)}</td>
+        <td class="num">${l.subtotal.toFixed(2)}</td>
+      </tr>`;
+    }).join('');
+
+    html += `
+      <div class="resumen-prod-block">
+        <div class="resumen-prod-titulo">
+          <span>🧪 ${prod.nombre}</span>
+          <span style="font-size:0.82rem;color:#5d6d7e;font-weight:400">unidad: ${prod.unidad}</span>
+        </div>
+        <table class="resumen-table">
+          <thead><tr>
+            <th>Lote</th><th>Cultivo</th><th>Ha</th>
+            <th>Dosis ${prod.unidad}</th><th>Total ${unidS}</th>
+          </tr></thead>
+          <tbody>
+            ${filas}
+            <tr class="total-row">
+              <td colspan="2"><strong>TOTAL</strong></td>
+              <td class="num">${totalHa}</td>
+              <td>—</td>
+              <td class="num"><strong>${displayTotal.toFixed(2)} ${unidS}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="envase-box">
+          <div class="envase-top-row">
+            <span class="envase-label">Tamaño del envase</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" class="envase-input" id="env-${k}"
+                value="${envase}" min="0.1" step="0.5"
+                oninput="recalcEnvase('${k}')"
+                onchange="recalcEnvase('${k}')" />
+              <span style="font-size:0.85rem;color:#5d6d7e;font-weight:600">${unidS}</span>
+            </div>
+            <span class="total-actual-chip">Total actual: ${displayTotal.toFixed(2)} ${unidS}</span>
+          </div>
+          <div id="envres-${k}">
+            ${buildEnvaseChips(k, prod.total, envase, prod.unidad)}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML += html;
+}
+
+// Construye las dos opciones (arriba / abajo) de redondeo
+function buildEnvaseChips(k, total, envase, unidad) {
+  const unidS      = unidad.split('/')[0];
+  const meta       = envaseProdMeta[k];
+  const lotes      = meta ? meta.lotes : [];
+  // Si el usuario ya aceptó un ajuste, usar ese total exacto; sino redondear a 2 decimales
+  const effectiveTotal = acceptedTotals[k] !== undefined
+    ? acceptedTotals[k]
+    : Math.round(total * 100) / 100;
+  const envasesUp  = Math.ceil(effectiveTotal / envase);
+  const envasesDown= Math.floor(effectiveTotal / envase);
+  const totalUp    = envasesUp  * envase;
+  const totalDown  = envasesDown * envase;
+  const isExact    = Math.abs(totalUp - effectiveTotal) < 0.001;
+
+  function dosisLotesHTML(newTotal) {
+    if (!lotes.length || effectiveTotal <= 0) return '';
+    const sf = newTotal / effectiveTotal;
+    return `<div class="dosis-por-lote">${lotes.map(l =>
+      `<div class="dosis-lote-row">
+        <span class="dosis-lote-id">Lote ${l.loteId} (${l.ha} ha)</span>
+        <span class="dosis-lote-val">${(l.dosis * sf).toFixed(4)} ${unidad}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (isExact) {
+    return `<div class="opciones-row">
+      <div class="opcion-envase opcion-exact">
+        <div class="opcion-header">✓ Total exacto</div>
+        <div class="opcion-num">${envasesUp} envase${envasesUp!==1?'s':''} × ${envase} ${unidS} = ${totalUp.toFixed(2)} ${unidS}</div>
+        <div class="opcion-pct pct-exact">Sin ajuste necesario</div>
+        ${dosisLotesHTML(totalUp)}
+        <button class="btn-opcion btn-exact" disabled>✓ Exacto</button>
+      </div>
+    </div>`;
+  }
+
+  const pctUp   = ((totalUp / total - 1) * 100).toFixed(1);
+  const pctDown = envasesDown > 0 ? (((totalDown / total) - 1) * 100).toFixed(1) : null;
+
+  let downHTML = '';
+  if (envasesDown > 0) {
+    const diffDown = (totalDown - total).toFixed(2); // negativo
+    downHTML = `
+      <div class="opcion-envase opcion-down">
+        <div class="opcion-header">▼ Redondear para abajo</div>
+        <div class="opcion-num">${envasesDown} envase${envasesDown!==1?'s':''} × ${envase} ${unidS} = ${totalDown.toFixed(2)} ${unidS}</div>
+        <div class="opcion-pct pct-down">${pctDown}% (${diffDown} ${unidS})</div>
+        ${dosisLotesHTML(totalDown)}
+        <button class="btn-opcion btn-down" id="envbtn-down-${k}"
+          onclick="aceptarAjuste('${k}', ${totalDown}, 'down')">✓ Aceptar ▼</button>
+      </div>`;
+  }
+
+  const diffUp = (totalUp - total).toFixed(2);
+  return `<div class="opciones-row">
+    <div class="opcion-envase opcion-up">
+      <div class="opcion-header">▲ Redondear para arriba</div>
+      <div class="opcion-num">${envasesUp} envase${envasesUp!==1?'s':''} × ${envase} ${unidS} = ${totalUp.toFixed(2)} ${unidS}</div>
+      <div class="opcion-pct pct-up">+${pctUp}% (+${diffUp} ${unidS})</div>
+      ${dosisLotesHTML(totalUp)}
+      <button class="btn-opcion btn-up" id="envbtn-up-${k}"
+        onclick="aceptarAjuste('${k}', ${totalUp}, 'up')">✓ Aceptar ▲</button>
+    </div>
+    ${downHTML}
+  </div>`;
+}
+
+// =============================================
+// AJUSTE POR ENVASE
+// =============================================
+function recalcEnvase(k) {
+  const input = document.getElementById(`env-${k}`);
+  if (!input) return;
+  const envase = parseFloat(input.value);
+  if (!envase || envase <= 0) return;
+  envaseSize[k] = envase;
+
+  const meta = envaseProdMeta[k];
+  if (!meta) return;
+  const el = document.getElementById(`envres-${k}`);
+  if (el) el.innerHTML = buildEnvaseChips(k, meta.total, envase, meta.unidad);
+}
+
+function aceptarAjuste(k, newTotal, dir) {
+  const meta = envaseProdMeta[k];
+  if (!meta || !newTotal || meta.total <= 0) return;
+  const sf = newTotal / meta.total;
+
+  LOTES.filter(l => selectedLotes.has(l.id)).forEach(lote => {
+    (productosPorlote[lote.id] || []).forEach((p, idx) => {
+      if (eKey(p.nombre.trim(), p.unidad) !== k) return;
+      if (!p.dosis || parseFloat(p.dosis) <= 0) return;
+      const nuevaDosis = (parseFloat(p.dosis) * sf).toFixed(4);
+      productosPorlote[lote.id][idx].dosis = nuevaDosis;
+      patchRowDOM(lote.id, idx, 'dosis', nuevaDosis);
+      refreshTotalCell(lote.id, idx);
+    });
+  });
+
+  // Guardar el total exacto aceptado para evitar errores de punto flotante al recalcular
+  acceptedTotals[k] = newTotal;
+
+  // Feedback en el botón aceptado
+  const btn = document.getElementById(`envbtn-${dir}-${k}`);
+  if (btn) { btn.classList.add('aplicado'); btn.textContent = '✓ Aplicado'; }
+
+  setTimeout(() => applyColors(), 50);
+}
+
+// =============================================
+// GENERACIÓN DE PDF
+// =============================================
+function generarPDF() {
+  const fecha    = document.getElementById('fecha').value;
+  const tipo     = document.getElementById('tipoAplicacion').value;
+  const operador = document.getElementById('operador').value.trim();
+  const obs      = document.getElementById('observaciones').value.trim();
+  const campo    = 'Las Lomas';
+
+  const lotesSelec = LOTES.filter(l => selectedLotes.has(l.id));
+  const lotesConProds = lotesSelec.filter(l =>
+    (productosPorlote[l.id] || []).some(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0)
+  );
+
+  if (lotesConProds.length === 0) {
+    alert('No hay lotes con productos cargados para generar el PDF.');
+    return;
+  }
+
+  const btn = document.getElementById('btnConfirmar');
+  const statusEl = document.getElementById('pdfStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando PDF...';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const fechaFmt = fecha ? fecha.split('-').reverse().join('/') : '—';
+    const fechaFile = fecha || 'sin_fecha';
+    const nombreArchivo = `${campo.replace(/\s+/g,'_')}_${fechaFile}.pdf`;
+
+    const AZUL      = [26, 82, 118];
+    const AZUL_CLARO= [214, 234, 248];
+    const GRIS      = [240, 244, 248];
+    const BLANCO    = [255, 255, 255];
+    const marginL   = 14;
+    const pageW     = 210;
+    const cW        = pageW - marginL * 2;
+
+    // ── Encabezado de página
+    function drawPageHeader(doc) {
+      doc.setFillColor(...AZUL);
+      doc.rect(0, 0, pageW, 26, 'F');
+      doc.setTextColor(...BLANCO);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('Planilla de Aplicacion de Herbicidas', marginL, 11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const meta = [campo, fechaFmt, tipo, operador].filter(Boolean).join('  |  ');
+      doc.text(meta, marginL, 19);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    // ── Número de página en pie
+    function drawPageFooter(doc, pageNum, totalPages) {
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Pagina ${pageNum} / ${totalPages}`, pageW - marginL, 290, { align: 'right' });
+      if (obs) doc.text(`Obs: ${obs}`, marginL, 290);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    let y = 32;
+
+    // ── SECCIÓN: APLICACIÓN POR LOTE
+    drawPageHeader(doc);
+
+    // Título sección
+    doc.setFillColor(...GRIS);
+    doc.rect(marginL, y, cW, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...AZUL);
+    doc.text('APLICACION POR LOTE', marginL + 3, y + 5.5);
+    doc.setTextColor(0, 0, 0);
+    y += 11;
+
+    for (const lote of lotesConProds) {
+      const prods = (productosPorlote[lote.id] || [])
+        .filter(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0);
+
+      // Necesitamos al menos ~20mm para header + 1 fila
+      if (y > 255) {
+        doc.addPage();
+        drawPageHeader(doc);
+        y = 32;
+      }
+
+      // Encabezado del lote
+      doc.setFillColor(...AZUL);
+      doc.roundedRect(marginL, y, cW, 8, 1.5, 1.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...BLANCO);
+      doc.text(`Lote ${lote.id}`, marginL + 3, y + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`${lote.ha} ha   |   ${lote.cultivo}`, marginL + 28, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 10;
+
+      // Tabla de productos
+      const rows = prods.map(p => [
+        p.nombre,
+        parseFloat(p.dosis).toFixed(3),
+        p.unidad,
+        (parseFloat(p.dosis) * lote.ha).toFixed(2) + ' ' + p.unidad.split('/')[0]
+      ]);
+
+      doc.autoTable({
+        head: [['Producto', 'Dosis / ha', 'Unidad', 'Total']],
+        body: rows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 } },
+        headStyles: {
+          fillColor: AZUL_CLARO,
+          textColor: AZUL,
+          fontStyle: 'bold',
+          fontSize: 8.5,
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 28, halign: 'right' },
+          2: { cellWidth: 22, halign: 'center' },
+          3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+        },
+        alternateRowStyles: { fillColor: [248, 251, 253] },
+        theme: 'plain',
+        tableLineColor: [220, 220, 220],
+        tableLineWidth: 0.2,
+      });
+
+      y = doc.lastAutoTable.finalY + 7;
+    }
+
+    // ── SECCIÓN: RESUMEN POR LOTE (matriz)
+    if (y > 200) { doc.addPage(); drawPageHeader(doc); y = 32; }
+
+    doc.setFillColor(...GRIS);
+    doc.rect(marginL, y, cW, 8, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...AZUL);
+    doc.text('RESUMEN POR LOTE', marginL + 3, y + 5.5);
+    doc.setTextColor(0, 0, 0);
+    y += 11;
+
+    // Construir columnas de productos únicos
+    const prodCols = [];
+    const prodColKeys = new Set();
+    lotesConProds.forEach(lote => {
+      (productosPorlote[lote.id] || []).forEach(p => {
+        if (!p.nombre || !p.dosis || parseFloat(p.dosis) <= 0) return;
+        const ck = p.nombre.trim() + '|||' + p.unidad;
+        if (!prodColKeys.has(ck)) { prodColKeys.add(ck); prodCols.push({ nombre: p.nombre.trim(), unidad: p.unidad }); }
+      });
+    });
+
+    const matrizHead = [['Lote', 'Ha', 'Cultivo', ...prodCols.map(pc => `${pc.nombre}\n(${pc.unidad})`)]];
+    const totalesHa  = new Array(prodCols.length).fill(0);
+    const matrizRows = lotesConProds.map(lote => {
+      const dosisMap = {};
+      (productosPorlote[lote.id] || []).forEach(p => {
+        if (!p.nombre || !p.dosis || parseFloat(p.dosis) <= 0) return;
+        dosisMap[p.nombre.trim() + '|||' + p.unidad] = parseFloat(p.dosis);
+      });
+      const celdas = prodCols.map((pc, ci) => {
+        const d = dosisMap[pc.nombre + '|||' + pc.unidad];
+        if (d !== undefined) { totalesHa[ci] += d * lote.ha; return d.toFixed(3); }
+        return '—';
+      });
+      return [`Lote ${lote.id}`, lote.ha.toString(), lote.cultivo, ...celdas];
+    });
+    const totalHaAll = lotesConProds.reduce((s, l) => s + l.ha, 0);
+    matrizRows.push(['TOTAL', totalHaAll.toString(), '—', ...prodCols.map((pc, ci) =>
+      `${totalesHa[ci].toFixed(1)} ${pc.unidad.split('/')[0]}`)]);
+
+    doc.autoTable({
+      head: matrizHead,
+      body: matrizRows,
+      startY: y,
+      margin: { left: marginL, right: marginL },
+      styles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, halign: 'center' },
+      headStyles: { fillColor: AZUL_CLARO, textColor: AZUL, fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
+      columnStyles: { 0: { halign: 'left', fontStyle: 'bold' }, 2: { halign: 'left' } },
+      willDrawCell(data) {
+        if (data.section !== 'body') return;
+        if (data.row.index === matrizRows.length - 1) {
+          data.cell.styles.fillColor = AZUL;
+          data.cell.styles.textColor = BLANCO;
+          data.cell.styles.fontStyle = 'bold';
+        } else if (data.cell.raw === '—') {
+          data.cell.styles.textColor = [200, 200, 200];
+        }
+      },
+      alternateRowStyles: { fillColor: [248, 251, 253] },
+      theme: 'plain',
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.2,
+    });
+
+    y = doc.lastAutoTable.finalY + 10;
+
+    // ── SECCIÓN: TOTAL DE PRODUCTOS A COMPRAR / STOCK
+    if (y > 220) { doc.addPage(); drawPageHeader(doc); y = 32; }
+
+    doc.setFillColor(...GRIS);
+    doc.rect(marginL, y, cW, 8, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...AZUL);
+    doc.text('TOTAL DE PRODUCTOS A COMPRAR / STOCK', marginL + 3, y + 5.5);
+    doc.setTextColor(0, 0, 0);
+    y += 11;
+
+    // Construir totales por producto
+    const mapaStock = {};
+    lotesConProds.forEach(lote => {
+      (productosPorlote[lote.id] || []).forEach(p => {
+        if (!p.nombre || !p.dosis || parseFloat(p.dosis) <= 0) return;
+        const key = p.nombre.trim() + '||' + p.unidad;
+        if (!mapaStock[key]) mapaStock[key] = { nombre: p.nombre.trim(), unidad: p.unidad, total: 0 };
+        mapaStock[key].total += parseFloat(p.dosis) * lote.ha;
+      });
+    });
+
+    const stockRows = Object.values(mapaStock).map(prod => {
+      const k            = (prod.nombre + '||' + prod.unidad).replace(/[^a-zA-Z0-9]/g, '_');
+      const envase       = envaseSize[k] || 20;
+      const totalForCalc = acceptedTotals[k] !== undefined
+        ? acceptedTotals[k]
+        : Math.round(prod.total * 100) / 100;
+      const envases      = Math.ceil(totalForCalc / envase);
+      const totalAj      = envases * envase;
+      const unidS    = prod.unidad.split('/')[0];
+      const sobrante = totalAj - totalForCalc;
+      return [
+        prod.nombre,
+        prod.unidad,
+        prod.total.toFixed(2) + ' ' + unidS,
+        `${envase} ${unidS}`,
+        `${envases} envase${envases !== 1 ? 's' : ''}`,
+        totalAj.toFixed(2) + ' ' + unidS,
+        sobrante < 0.005 ? 'Exacto' : '+' + sobrante.toFixed(2) + ' ' + unidS,
+      ];
+    });
+
+    doc.autoTable({
+      head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a comprar', 'Sobrante']],
+      body: stockRows,
+      startY: y,
+      margin: { left: marginL, right: marginL },
+      styles: { fontSize: 9, cellPadding: { top: 3, bottom: 3, left: 3, right: 3 } },
+      headStyles: { fillColor: AZUL, textColor: BLANCO, fontStyle: 'bold', fontSize: 8.5 },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        2: { halign: 'right' },
+        3: { halign: 'center' },
+        4: { halign: 'center', fontStyle: 'bold' },
+        5: { halign: 'right', fontStyle: 'bold' },
+        6: { halign: 'right' },
+      },
+      willDrawCell(data) {
+        if (data.section !== 'body') return;
+        if (data.column.index === 6) {
+          if (data.cell.raw === 'Exacto') {
+            data.cell.styles.textColor = [27, 132, 73];
+            data.cell.styles.fontStyle = 'bold';
+          } else {
+            data.cell.styles.textColor = [154, 96, 5];
+          }
+        }
+        if (data.column.index === 4) {
+          data.cell.styles.fillColor = [255, 243, 205];
+          data.cell.styles.textColor = [100, 60, 0];
+        }
+      },
+      alternateRowStyles: { fillColor: [248, 251, 253] },
+      theme: 'plain',
+      tableLineColor: [220, 220, 220],
+      tableLineWidth: 0.2,
+    });
+
+    y = doc.lastAutoTable.finalY + 9;
+
+    // ── Pies de página con número
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      drawPageFooter(doc, i, totalPages);
+    }
+
+    doc.save(nombreArchivo);
+
+    statusEl.textContent = `PDF guardado: ${nombreArchivo}`;
+    statusEl.style.display = 'block';
+    setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
+  } catch (err) {
+    console.error(err);
+    alert('Error al generar el PDF: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ Confirmar y guardar PDF';
+  }
+}
+
+// =============================================
+// UTILIDADES
+// =============================================
+function safeId(str) { return str.replace(/\s/g, '-'); }
+
+function limpiarTodo() {
+  if (!confirm('¿Querés limpiar toda la planilla?')) return;
+  selectedLotes.clear();
+  productosPorlote = {};
+  lockedGroups.clear();
+  envaseSize = {};
+  envaseProdMeta = {};
+  acceptedTotals = {};
+  renderLotes();
+  renderLotesProductos();
+  document.getElementById('cardResumen').style.display = 'none';
+  document.getElementById('operador').value = '';
+  document.getElementById('observaciones').value = '';
+  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+}
+
+init();
+</script>
+</body>
+</html>

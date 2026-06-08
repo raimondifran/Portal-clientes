@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planilla Fumigación — Elisa Cardenau</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
+header{background:linear-gradient(135deg,#1a5276,#2e86c1);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+header h1{font-size:1.15rem;font-weight:700}
+header p{font-size:.8rem;opacity:.85}
+.badge{margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:600}
+.container{max-width:1000px;margin:20px auto;padding:0 14px}
+.card{background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;margin-bottom:16px}
+.card-title{font-size:.95rem;font-weight:700;color:#1a5276;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #d6eaf8}
+label{font-size:.75rem;font-weight:600;color:#5d6d7e;text-transform:uppercase;display:block;margin-bottom:4px}
+input,select{width:100%;padding:7px 10px;border:1.5px solid #d5d8dc;border-radius:7px;font-size:.9rem;color:#1a202c;background:#fff}
+input:focus,select:focus{outline:none;border-color:#2e86c1;box-shadow:0 0 0 3px rgba(46,134,193,.15)}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.form-group{flex:1;min-width:130px}
+
+/* Campo sections */
+.campo-section{border-radius:10px;overflow:hidden;margin-bottom:12px;border:2px solid #d5d8dc}
+.campo-header{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;user-select:none;transition:.15s}
+.campo-header:hover{filter:brightness(.97)}
+.campo-header .ch-icon{font-size:1.4rem}
+.campo-header .ch-name{font-weight:700;font-size:.97rem;color:#fff}
+.campo-header .ch-meta{font-size:.78rem;opacity:.85;color:#fff}
+.campo-header .ch-count{margin-left:auto;background:rgba(255,255,255,.25);border-radius:12px;padding:2px 10px;font-size:.75rem;font-weight:700;color:#fff}
+.campo-header .ch-arrow{font-size:.9rem;color:rgba(255,255,255,.8);margin-left:6px;transition:.2s}
+.campo-body{background:#fff;border-top:1px solid rgba(0,0,0,.07)}
+.campo-body.collapsed{display:none}
+
+.lote-row{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #f0f4f8;cursor:pointer;transition:.12s}
+.lote-row:last-child{border-bottom:none}
+.lote-row:hover{background:#f5faff}
+.lote-row.selected{background:#d6eaf8}
+.lote-check{width:17px;height:17px;accent-color:#2e86c1;cursor:pointer;flex-shrink:0}
+.lote-name{font-weight:600;font-size:.88rem;flex:1}
+.lote-meta{font-size:.76rem;color:#5d6d7e}
+
+/* Selección rápida */
+.sel-all-row{padding:6px 16px;background:#f8fbff;display:flex;gap:10px;border-bottom:1px solid #eaf4fb}
+.btn-sel{font-size:.72rem;color:#2e86c1;background:none;border:1px solid #aed6f1;border-radius:5px;padding:2px 8px;cursor:pointer}
+.btn-sel:hover{background:#eaf4fb}
+
+.prod-block{border:1.5px solid #d5d8dc;border-radius:8px;margin-bottom:10px;overflow:hidden}
+.prod-header{background:#eaf4fb;padding:8px 14px;font-weight:700;font-size:.88rem;color:#1a5276;display:flex;align-items:center;gap:8px}
+.prod-body{padding:10px 14px}
+.prod-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.prod-row input[type=text]{flex:3;min-width:120px}
+.prod-row input[type=number]{flex:1.2;min-width:70px}
+.prod-row select{flex:1.2;min-width:80px}
+.prod-row .total-chip{flex:1.5;min-width:90px;background:#d6eaf8;border:none;border-radius:6px;padding:7px 10px;font-size:.85rem;font-weight:600;color:#1a5276;text-align:center}
+.btn-remove{background:none;border:none;color:#e74c3c;cursor:pointer;font-size:1rem;padding:4px 6px}
+.btn-add{background:#eaf4fb;color:#2e86c1;border:1.5px solid #aed6f1;border-radius:7px;padding:5px 12px;font-size:.82rem;cursor:pointer;margin-top:4px}
+.btn-add:hover{background:#d6eaf8}
+.btn-confirm{background:linear-gradient(135deg,#1a5276,#2e86c1);color:#fff;border:none;border-radius:9px;padding:13px 32px;font-size:1rem;font-weight:700;cursor:pointer;transition:.18s;box-shadow:0 3px 10px rgba(46,134,193,.35)}
+.btn-confirm:hover{transform:translateY(-1px);box-shadow:0 5px 15px rgba(46,134,193,.45)}
+.btn-limpiar{background:#fdf2f8;color:#8e44ad;border:1.5px solid #e8d5f0;border-radius:7px;padding:8px 16px;font-size:.84rem;cursor:pointer}
+.hint{background:#eaf4fb;border-left:3px solid #2e86c1;border-radius:0 7px 7px 0;padding:8px 12px;font-size:.83rem;color:#1a5276;margin-bottom:12px}
+.sel-summary{background:#eaf4fb;border-radius:8px;padding:8px 14px;font-size:.82rem;color:#1a5276;margin-bottom:10px;font-weight:600}
+
+/* PRINT / PDF */
+#printView{display:none;font-family:'Segoe UI',Arial,sans-serif;color:#1a202c}
+.pv-logo{font-size:.8rem;color:#2e86c1;font-weight:700;letter-spacing:.05em;margin-bottom:2px}
+.pv-h1{font-size:1.35rem;font-weight:700;color:#1a5276;margin-bottom:3px}
+.pv-meta{font-size:.82rem;color:#5d6d7e;margin-bottom:12px}
+.pv-hr{border:none;border-top:2px solid #2e86c1;margin:0 0 16px}
+.pv-block{margin-bottom:18px;page-break-inside:avoid}
+.pv-lote{font-weight:700;font-size:.9rem;color:#fff;background:#1a5276;padding:5px 10px;border-radius:4px 4px 0 0}
+.pv-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.pv-table th{background:#d6eaf8;color:#1a5276;padding:5px 8px;text-align:left;border:1px solid #aed6f1}
+.pv-table th.r{text-align:right}
+.pv-table td{padding:4px 8px;border:1px solid #d5d8dc}
+.pv-table td.r{text-align:right}
+.pv-table tr:nth-child(even) td{background:#f7fbfe}
+.pv-obs{font-size:.8rem;color:#5d6d7e;font-style:italic;margin-top:12px;border-top:1px solid #eee;padding-top:8px}
+.pv-footer{font-size:.7rem;color:#aaa;text-align:right;margin-top:16px;border-top:1px solid #eee;padding-top:6px}
+.pv-sec-title{font-size:1rem;font-weight:700;color:#1a5276;background:#eaf4fb;border-left:4px solid #2e86c1;padding:7px 12px;border-radius:0 6px 6px 0;margin:18px 0 10px}
+.pv-sec-break{page-break-before:always;margin-top:20px}
+.pv-campo-sep{font-size:.78rem;font-weight:700;color:#7f8c8d;background:#f8f9fa;padding:3px 8px;margin:10px 0 4px;border-radius:4px;text-transform:uppercase;letter-spacing:.05em}
+
+@media print{
+  body>*:not(#printWrapper){display:none!important}
+  #printWrapper{display:block!important}
+  #printView{display:block!important}
+  @page{margin:1.5cm}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div style="font-size:1.6rem">🌾</div>
+  <div>
+    <h1>Planilla de Fumigación 2026</h1>
+    <p>Elisa Cardenau</p>
+  </div>
+  <div class="badge">📁 Fumigadas 2026</div>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">📋 Datos de la aplicación</div>
+    <div class="form-row">
+      <div class="form-group"><label>Fecha</label><input type="date" id="fecha"></div>
+      <div class="form-group"><label>Tipo</label><select id="tipo"><option>TERRESTRE</option><option>AVIÓN</option><option>DRONE</option></select></div>
+      <div class="form-group"><label>Operador / Empresa</label><input type="text" id="operador" placeholder="Nombre"></div>
+      <div class="form-group"><label>Observaciones</label><input type="text" id="obs" placeholder="Notas"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">1️⃣ Seleccioná los lotes</div>
+    <div class="hint">Podés seleccionar lotes de uno o varios campos en la misma fumigada.</div>
+    <div id="selSummary" class="sel-summary" style="display:none"></div>
+    <div id="camposContainer"></div>
+  </div>
+
+  <div class="card" id="cardProds" style="display:none">
+    <div class="card-title">2️⃣ Productos por lote</div>
+    <div class="hint">Cargá los productos y la dosis por hectárea para cada lote seleccionado.</div>
+    <div id="prodsContainer"></div>
+  </div>
+
+  <div class="card" style="text-align:center;padding:24px">
+    <div style="font-size:.85rem;color:#5d6d7e;margin-bottom:14px">
+      Cuando todo esté listo, confirmá para generar el PDF.<br>
+      <strong>Chrome</strong>: elegí <em>Guardar como PDF</em> y guardalo en la carpeta <em>Fumigadas 2026</em>.
+    </div>
+    <button class="btn-confirm" onclick="confirmar()">📄 Confirmar y generar PDF</button>
+  </div>
+
+  <div class="card" style="padding:12px 20px">
+    <button class="btn-limpiar" onclick="limpiar()">🗑 Limpiar todo</button>
+  </div>
+
+</div>
+
+<!-- PRINT WRAPPER -->
+<div id="printWrapper" style="display:none">
+  <div id="printView"></div>
+</div>
+
+<script>
+// ── DATOS 2026 ──────────────────────────────────────────────
+const CAMPOS = {
+  'San Jorge':{zona:'Lamadrid',color:'#e67e22',icon:'🌽',lotes:[
+    {id:'San Jorge',ha:172,cultivo:'Maíz'}
+  ]},
+  'La Unión':{zona:'Necochea',color:'#27ae60',icon:'🌻',lotes:[
+    {id:'1A',ha:54.7,cultivo:'Girasol'},{id:'1B',ha:52.929,cultivo:'Maíz'},
+    {id:'2',ha:56.8,cultivo:'Maíz'},{id:'3',ha:52.9,cultivo:'Maíz'},
+    {id:'4',ha:57.2,cultivo:'Girasol'},{id:'5',ha:54.6,cultivo:'Soja'},
+    {id:'6A',ha:49.6,cultivo:'Girasol'},{id:'6B',ha:54.47,cultivo:'Ceb/Sj 2da'}
+  ]},
+  'KEES':{zona:'Olavarría',color:'#8e44ad',icon:'🌾',lotes:[
+    {id:'KEES',ha:145,cultivo:'Ceb/Sj 2da'}
+  ]},
+  'La Paz':{zona:'Olavarría',color:'#2980b9',icon:'🌿',lotes:[
+    {id:'Lote 62',ha:62,cultivo:'Ceb/Sj 2da'},{id:'Lote 17 (LaPaz)',ha:17,cultivo:'Colza'},
+    {id:'Lote 46',ha:46,cultivo:'Colza'},{id:'Lote 60',ha:60,cultivo:'CN'}
+  ]},
+  'San Francisco':{zona:'Olavarría',color:'#c0392b',icon:'🏞️',lotes:[
+    {id:'Lote 0',ha:11,cultivo:'Soja'},{id:'Lote 1',ha:60,cultivo:'Girasol AO'},
+    {id:'Lote 2A',ha:18.5,cultivo:'Colza'},{id:'Lote 2B',ha:41,cultivo:'CN'},
+    {id:'Lote 3 (49.5)',ha:49.5,cultivo:'Maíz'},{id:'Lote 3 (13)',ha:13,cultivo:'CN'},
+    {id:'Lote 4',ha:55,cultivo:'TRIGO'},{id:'Lote 5',ha:55,cultivo:'Soja'},
+    {id:'Lote 6',ha:61,cultivo:'Girasol'},{id:'Lote 7',ha:62,cultivo:'PP'},
+    {id:'Lote 8',ha:62,cultivo:'PI'},{id:'Lote 9 (41)',ha:41,cultivo:'Soja'},
+    {id:'Lote 9 (19)',ha:19,cultivo:'CN'},{id:'Lote 10',ha:55,cultivo:'Ceb/Sj 2da'},
+    {id:'Lote 10-11B',ha:55,cultivo:'CN'},{id:'Lote 11A',ha:12.5,cultivo:'PP'},
+    {id:'Lote 12A',ha:40,cultivo:'Ceb/Sj 2da'},{id:'Lote 12B',ha:18,cultivo:'CN'},
+    {id:'Lote 13',ha:33,cultivo:'CN'},{id:'Lote 14',ha:69,cultivo:'Ceb/Sj 2da'},
+    {id:'Lote 15A',ha:15,cultivo:'Colza'},{id:'Lote 15B',ha:47,cultivo:'CN'},
+    {id:'Lote 16',ha:63,cultivo:'Girasol AO'},{id:'Lote 17',ha:35,cultivo:'Girasol'},
+    {id:'Lote 18 (26)',ha:26,cultivo:'Girasol'},{id:'Lote 18 (20)',ha:20,cultivo:'CN'},
+    {id:'Lote 19',ha:35,cultivo:'Girasol'},{id:'Lote 20 (30)',ha:30,cultivo:'Girasol'},
+    {id:'Lote 20 (14)',ha:14,cultivo:'CN'},{id:'Lote 21',ha:27,cultivo:'PP'},
+    {id:'Lote 22 (27)',ha:27,cultivo:'Ceb/Sj 2da'},{id:'Lote 22 (15)',ha:15,cultivo:'CN'}
+  ]}
+};
+
+// Mapa global loteId → {campo, lote}
+const LOTE_MAP = {};
+Object.keys(CAMPOS).forEach(c=>{
+  CAMPOS[c].lotes.forEach(l=>{
+    LOTE_MAP[l.id]={campo:c, lote:l};
+  });
+});
+
+// ── ESTADO ──────────────────────────────────────────────────
+let selectedLotes = new Set(); // Set de loteId
+let productos = {};            // { loteId: [{nombre,dosis,unidad}] }
+let collapsed = {};            // { campo: bool }
+
+// ── INIT ────────────────────────────────────────────────────
+function init(){
+  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+  renderCampos();
+}
+
+function renderCampos(){
+  const cont = document.getElementById('camposContainer');
+  cont.innerHTML = '';
+  Object.keys(CAMPOS).forEach(nombre=>{
+    const c = CAMPOS[nombre];
+    const haTotal = c.lotes.reduce((s,l)=>s+l.ha,0);
+    const selCount = c.lotes.filter(l=>selectedLotes.has(l.id)).length;
+    const isCollapsed = collapsed[nombre] !== false; // default collapsed
+
+    const sec = document.createElement('div');
+    sec.className = 'campo-section';
+    sec.style.borderColor = c.color;
+
+    sec.innerHTML = `
+      <div class="campo-header" style="background:${c.color}" onclick="toggleCampo('${nombre}')">
+        <span class="ch-icon">${c.icon}</span>
+        <span>
+          <div class="ch-name">${nombre}</div>
+          <div class="ch-meta">${c.zona} · ${haTotal.toLocaleString('es-AR',{maximumFractionDigits:1})} ha · ${c.lotes.length} lotes</div>
+        </span>
+        ${selCount>0?`<span class="ch-count">✓ ${selCount} lote${selCount>1?'s':''}</span>`:''}
+        <span class="ch-arrow" id="arr_${safeId(nombre)}">${isCollapsed?'▼':'▲'}</span>
+      </div>
+      <div class="campo-body${isCollapsed?' collapsed':''}" id="body_${safeId(nombre)}">
+        <div class="sel-all-row">
+          <button class="btn-sel" onclick="event.stopPropagation();selAll('${nombre}',true)">Seleccionar todos</button>
+          <button class="btn-sel" onclick="event.stopPropagation();selAll('${nombre}',false)">Deseleccionar todos</button>
+        </div>
+        ${c.lotes.map(l=>`
+          <div class="lote-row${selectedLotes.has(l.id)?' selected':''}" id="lrow_${safeId(l.id)}" onclick="toggleLote('${esc(l.id)}')">
+            <input type="checkbox" class="lote-check" ${selectedLotes.has(l.id)?'checked':''}
+              onclick="event.stopPropagation();toggleLote('${esc(l.id)}')">
+            <span class="lote-name">${l.id}</span>
+            <span class="lote-meta">${l.ha} ha &nbsp;·&nbsp; ${l.cultivo}</span>
+          </div>`).join('')}
+      </div>`;
+    cont.appendChild(sec);
+  });
+  updateSelSummary();
+}
+
+function toggleCampo(nombre){
+  collapsed[nombre] = collapsed[nombre] === false ? true : false;
+  const body = document.getElementById('body_'+safeId(nombre));
+  const arr  = document.getElementById('arr_'+safeId(nombre));
+  if(collapsed[nombre] === false){
+    body.classList.remove('collapsed');
+    arr.textContent='▲';
+  } else {
+    body.classList.add('collapsed');
+    arr.textContent='▼';
+  }
+}
+
+function selAll(nombre, check){
+  CAMPOS[nombre].lotes.forEach(l=>{
+    if(check){
+      selectedLotes.add(l.id);
+      if(!productos[l.id]) productos[l.id]=[emptyProd()];
+    } else {
+      selectedLotes.delete(l.id);
+    }
+  });
+  renderCampos();
+  renderProds();
+}
+
+function toggleLote(id){
+  if(selectedLotes.has(id)){
+    selectedLotes.delete(id);
+  } else {
+    selectedLotes.add(id);
+    if(!productos[id]) productos[id]=[emptyProd()];
+  }
+  // Update just this row and the campo header
+  renderCampos();
+  renderProds();
+}
+
+function updateSelSummary(){
+  const el = document.getElementById('selSummary');
+  if(selectedLotes.size===0){el.style.display='none';return;}
+  // Group by campo
+  const byCampo = {};
+  selectedLotes.forEach(lid=>{
+    const info = LOTE_MAP[lid];
+    if(!info) return;
+    if(!byCampo[info.campo]) byCampo[info.campo]=[];
+    byCampo[info.campo].push(lid);
+  });
+  const parts = Object.keys(byCampo).map(c=>`${CAMPOS[c].icon} ${c}: ${byCampo[c].length} lote${byCampo[c].length>1?'s':''}`);
+  const haTotal = [...selectedLotes].reduce((s,lid)=>s+(LOTE_MAP[lid]?LOTE_MAP[lid].lote.ha:0),0);
+  el.style.display='';
+  el.textContent=`✅ ${selectedLotes.size} lote${selectedLotes.size>1?'s':''} seleccionados · ${haTotal.toLocaleString('es-AR',{maximumFractionDigits:2})} ha total — ${parts.join('  |  ')}`;
+}
+
+function emptyProd(){return{nombre:'',dosis:'',unidad:'L/ha'};}
+
+// ── PRODUCTOS ────────────────────────────────────────────────
+function renderProds(){
+  const c=document.getElementById('cardProds');
+  if(selectedLotes.size===0){c.style.display='none';return;}
+  c.style.display='';
+  const cont=document.getElementById('prodsContainer');
+  cont.innerHTML='';
+
+  // Group selected lotes by campo for display
+  const byCampo = {};
+  selectedLotes.forEach(lid=>{
+    const info = LOTE_MAP[lid];
+    if(!info) return;
+    if(!byCampo[info.campo]) byCampo[info.campo]=[];
+    byCampo[info.campo].push(info.lote);
+  });
+
+  Object.keys(byCampo).forEach(nombre=>{
+    // Campo separator
+    const sep = document.createElement('div');
+    sep.innerHTML=`<div style="font-size:.78rem;font-weight:700;color:${CAMPOS[nombre].color};background:#fafcfe;padding:6px 14px;border-radius:8px;margin-bottom:8px;border-left:4px solid ${CAMPOS[nombre].color}">${CAMPOS[nombre].icon} ${nombre}</div>`;
+    cont.appendChild(sep);
+
+    byCampo[nombre].forEach(l=>{
+      const lid=l.id;
+      if(!productos[lid]||!productos[lid].length) productos[lid]=[emptyProd()];
+      const block=document.createElement('div');
+      block.className='prod-block';
+      block.id='pb_'+safeId(lid);
+      let rows='';
+      productos[lid].forEach((_,i)=>{rows+=prodRowHTML(lid,i,l.ha);});
+      block.innerHTML=`<div class="prod-header">
+        <span>🌱 ${lid}</span>
+        <span style="font-weight:400;font-size:.8rem;color:#5d6d7e">${l.ha} ha · ${l.cultivo}</span>
+      </div>
+      <div class="prod-body">
+        <div style="display:flex;gap:6px;font-size:.72rem;font-weight:600;color:#5d6d7e;margin-bottom:4px;padding:0 4px">
+          <span style="flex:3">Producto</span>
+          <span style="flex:1.2;text-align:center">Dosis</span>
+          <span style="flex:1.2;text-align:center">Unidad</span>
+          <span style="flex:1.5;text-align:center">Total</span>
+          <span style="width:30px"></span>
+        </div>
+        <div id="rows_${safeId(lid)}">${rows}</div>
+        <button class="btn-add" onclick="addProd('${esc(lid)}')">+ Agregar producto</button>
+      </div>`;
+      cont.appendChild(block);
+    });
+  });
+}
+
+function prodRowHTML(lid,i,ha){
+  const p=productos[lid][i]||emptyProd();
+  const total=calcTotal(lid,i,ha);
+  const totalStr=total>0?total.toFixed(4).replace(/\.?0+$/,''):'-';
+  const sid=safeId(lid);
+  return`<div class="prod-row" id="pr_${sid}_${i}">
+    <input type="text" placeholder="Nombre del producto" value="${esc(p.nombre)}"
+      oninput="setProd('${esc(lid)}',${i},'nombre',this.value)">
+    <input type="number" step="0.0001" min="0" placeholder="0.0000" value="${p.dosis}"
+      oninput="setProd('${esc(lid)}',${i},'dosis',this.value)">
+    <select onchange="setProd('${esc(lid)}',${i},'unidad',this.value)">
+      ${['L/ha','cc/ha','kg/ha','g/ha','kg','L'].map(u=>`<option${p.unidad===u?' selected':''}>${u}</option>`).join('')}
+    </select>
+    <div class="total-chip">${totalStr} ${p.unidad?p.unidad.replace('/ha',''):''}</div>
+    <button class="btn-remove" onclick="removeProd('${esc(lid)}',${i})" title="Eliminar">✕</button>
+  </div>`;
+}
+
+function esc(s){return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function safeId(s){return String(s).replace(/[\s\-\/\.]/g,'-');}
+
+function setProd(lid,i,field,val){
+  if(!productos[lid]) return;
+  if(!productos[lid][i]) productos[lid][i]=emptyProd();
+  productos[lid][i][field]=val;
+  const info=LOTE_MAP[lid];
+  const ha=info?info.lote.ha:0;
+  const rowEl=document.getElementById('pr_'+safeId(lid)+'_'+i);
+  if(rowEl){
+    const chip=rowEl.querySelector('.total-chip');
+    const total=calcTotal(lid,i,ha);
+    const p=productos[lid][i];
+    chip.textContent=total>0?total.toFixed(4).replace(/\.?0+$/,'')+' '+(p.unidad?p.unidad.replace('/ha',''):''):'-';
+  }
+}
+
+function calcTotal(lid,i,ha){
+  const p=productos[lid]&&productos[lid][i];
+  if(!p||!p.dosis) return 0;
+  const d=parseFloat(p.dosis)||0;
+  if(!p.unidad||p.unidad.includes('/ha')) return Math.round(d*ha*10000)/10000;
+  return d;
+}
+
+function addProd(lid){
+  if(!productos[lid]) productos[lid]=[];
+  productos[lid].push(emptyProd());
+  renderProds();
+}
+
+function removeProd(lid,i){
+  if(!productos[lid]) return;
+  productos[lid].splice(i,1);
+  renderProds();
+}
+
+function limpiar(){
+  if(!confirm('¿Limpiar todos los lotes y productos?')) return;
+  selectedLotes.clear(); productos={};
+  renderCampos(); renderProds();
+}
+
+// ── CONFIRMAR → PRINT PDF (3 secciones) ─────────────────────
+function confirmar(){
+  // Lotes con al menos un producto cargado
+  const lotesConProds = [...selectedLotes]
+    .map(lid=>LOTE_MAP[lid])
+    .filter(info=>info && (productos[info.lote.id]||[]).some(p=>p.nombre&&parseFloat(p.dosis)>0));
+
+  if(!lotesConProds.length){alert('No hay lotes con productos cargados.');return;}
+
+  const fecha=document.getElementById('fecha').value;
+  const tipo=document.getElementById('tipo').value;
+  const op=document.getElementById('operador').value;
+  const obs=document.getElementById('obs').value;
+  const fFmt=fecha?new Date(fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):new Date().toLocaleDateString('es-AR');
+  const totalHa=lotesConProds.reduce((s,info)=>s+info.lote.ha,0);
+
+  // Campos involucrados
+  const camposInvolucrados=[...new Set(lotesConProds.map(info=>info.campo))];
+  const campoLabel=camposInvolucrados.length===1
+    ? camposInvolucrados[0]
+    : camposInvolucrados.join(' + ');
+
+  // ── Resumen por producto ────────────────────────────────────
+  const resumen={};
+  lotesConProds.forEach(info=>{
+    const l=info.lote;
+    (productos[l.id]||[]).filter(p=>p.nombre&&parseFloat(p.dosis)>0).forEach((p,i)=>{
+      const k=p.nombre+'||'+(p.unidad||'L/ha');
+      if(!resumen[k]) resumen[k]={nombre:p.nombre,unidad:p.unidad||'L/ha',lotes:[],total:0};
+      const t=calcTotal(l.id,i,l.ha);
+      resumen[k].lotes.push({lote:l.id,campo:info.campo,ha:l.ha,cultivo:l.cultivo,dosis:parseFloat(p.dosis),total:t});
+      resumen[k].total=Math.round((resumen[k].total+t)*10000)/10000;
+    });
+  });
+  const rKeys=Object.keys(resumen);
+
+  // ── ENCABEZADO ──────────────────────────────────────────────
+  let html=`<div style="text-align:center;margin-bottom:10px">
+    <div class="pv-logo">ELISA CARDENAU — PLANILLA DE FUMIGACIÓN 2026</div>
+    <div class="pv-h1">${campoLabel.toUpperCase()}</div>
+    <div class="pv-meta">Fecha: <strong>${fFmt}</strong> &nbsp;·&nbsp; Tipo: <strong>${tipo}</strong> &nbsp;·&nbsp; Operador: <strong>${op||'—'}</strong> &nbsp;·&nbsp; Total: <strong>${totalHa.toLocaleString('es-AR',{maximumFractionDigits:2})} ha</strong></div>
+  </div><hr class="pv-hr">`;
+
+  // ── SECCIÓN 1: DETALLE POR LOTE (agrupado por campo) ────────
+  html+=`<div class="pv-sec-title">📋 Detalle por lote</div>`;
+  camposInvolucrados.forEach(nombre=>{
+    if(camposInvolucrados.length>1){
+      html+=`<div class="pv-campo-sep">${CAMPOS[nombre].icon} ${nombre}</div>`;
+    }
+    lotesConProds.filter(info=>info.campo===nombre).forEach(info=>{
+      const l=info.lote;
+      const prods=(productos[l.id]||[]).filter(p=>p.nombre&&parseFloat(p.dosis)>0);
+      if(!prods.length) return;
+      html+=`<div class="pv-block"><div class="pv-lote">${l.id} &nbsp;·&nbsp; ${l.ha} ha &nbsp;·&nbsp; ${l.cultivo}</div>
+        <table class="pv-table"><thead><tr><th>Producto</th><th class="r">Dosis</th><th>Unidad</th><th class="r">Total</th></tr></thead><tbody>`;
+      prods.forEach((p,i)=>{
+        const t=calcTotal(l.id,i,l.ha);const ut=(p.unidad||'L/ha').replace('/ha','');
+        html+=`<tr><td>${p.nombre}</td><td class="r">${parseFloat(p.dosis).toLocaleString('es-AR',{maximumFractionDigits:4})}</td><td>${p.unidad||'L/ha'}</td><td class="r"><strong>${t.toLocaleString('es-AR',{maximumFractionDigits:4})} ${ut}</strong></td></tr>`;
+      });
+      html+=`</tbody></table></div>`;
+    });
+  });
+
+  // ── SECCIÓN 2: RESUMEN POR PRODUCTO ─────────────────────────
+  html+=`<div class="pv-sec-break"></div><div class="pv-sec-title">🧪 Resumen por producto</div>`;
+  rKeys.forEach(k=>{
+    const r=resumen[k];const ut=r.unidad.replace('/ha','');
+    html+=`<div class="pv-block"><div class="pv-lote" style="background:#2e86c1">${r.nombre} <span style="font-weight:400;font-size:.82rem;opacity:.85">(${r.unidad})</span></div>
+      <table class="pv-table"><thead><tr><th>Lote</th>${camposInvolucrados.length>1?'<th>Campo</th>':''}<th>Cultivo</th><th class="r">Ha</th><th class="r">Dosis</th><th class="r">Subtotal</th></tr></thead><tbody>`;
+    r.lotes.forEach(e=>{
+      html+=`<tr><td>${e.lote}</td>${camposInvolucrados.length>1?`<td>${e.campo}</td>`:''}<td>${e.cultivo}</td><td class="r">${e.ha}</td><td class="r">${e.dosis.toLocaleString('es-AR',{maximumFractionDigits:4})}</td><td class="r">${e.total.toLocaleString('es-AR',{maximumFractionDigits:4})} ${ut}</td></tr>`;
+    });
+    html+=`<tr style="background:#d6eaf8;font-weight:700"><td colspan="${camposInvolucrados.length>1?5:4}" style="text-align:right;padding-right:10px">TOTAL</td><td class="r">${r.total.toLocaleString('es-AR',{maximumFractionDigits:4})} ${ut}</td></tr>`;
+    html+=`</tbody></table></div>`;
+  });
+
+  // ── SECCIÓN 3: TOTAL INSUMOS ─────────────────────────────────
+  html+=`<div class="pv-sec-break"></div><div class="pv-sec-title">📦 Total de insumos — stock / compra</div>
+    <table class="pv-table"><thead><tr><th>#</th><th>Producto</th><th>Unidad</th><th class="r">Cantidad total</th></tr></thead><tbody>`;
+  rKeys.forEach((k,idx)=>{
+    const r=resumen[k];const ut=r.unidad.replace('/ha','');
+    html+=`<tr><td>${idx+1}</td><td><strong>${r.nombre}</strong></td><td>${ut}</td><td class="r" style="font-size:1rem;font-weight:700;color:#1a5276">${r.total.toLocaleString('es-AR',{maximumFractionDigits:4})} ${ut}</td></tr>`;
+  });
+  html+=`</tbody></table>`;
+
+  if(obs)html+=`<div class="pv-obs">Observaciones: ${obs}</div>`;
+  html+=`<div class="pv-footer">Generado: ${new Date().toLocaleString('es-AR')}</div>`;
+
+  document.getElementById('printView').innerHTML=html;
+  window.print();
+}
+
+init();
+</script>
+</body>
+</html>
