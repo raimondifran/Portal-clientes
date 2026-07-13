@@ -85,6 +85,7 @@
         <option value="">Todos</option>
       </select>
     </div>
+    <button class="btn" onclick="exportarExcel()">⬇️ Exportar a Excel</button>
   </div>
 
   <div class="resumen" id="resumen"></div>
@@ -168,6 +169,7 @@ async function cargarFiltros() {
 }
 
 function renderLabores(labores) {
+  ultimasLabores = labores;
   const el = document.getElementById('resultado');
   const resumen = document.getElementById('resumen');
   resumen.textContent = labores.length + ' labor(es) encontrada(s).';
@@ -208,6 +210,51 @@ function renderLabores(labores) {
       </div>
     `;
   }).join('');
+}
+
+let ultimasLabores = [];
+
+function csvEscape(v) {
+  const s = v == null ? '' : String(v);
+  if (/[";\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function exportarExcel() {
+  if (!ultimasLabores.length) {
+    alert('No hay labores cargadas para exportar.');
+    return;
+  }
+  const headers = ['Fecha','Tipo','Campo','Lote','Cultivo','Ha','Producto','Dosis','Unidad','Operador','Observaciones'];
+  const filas = [headers];
+
+  ultimasLabores.forEach(labor => {
+    const lotes = (labor.lotes && labor.lotes.length) ? labor.lotes : [{}];
+    lotes.forEach(l => {
+      const productos = (l.productos && l.productos.length) ? l.productos : [{}];
+      productos.forEach(p => {
+        filas.push([
+          labor.fecha || '', labor.tipo || '', labor.campo || '',
+          l.lote || '', l.cultivo || '', l.ha || '',
+          p.nombre || '', p.dosis || '', p.unidad || '',
+          labor.operador || '', labor.observaciones || ''
+        ]);
+      });
+    });
+  });
+
+  const csv = '﻿' + filas.map(fila => fila.map(csvEscape).join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const campoSel = document.getElementById('fCampo').value;
+  const nombre = 'labores_' + (clienteGuardado || 'cliente') + (campoSel ? '_' + campoSel : '') + '.csv';
+  a.href = url;
+  a.download = nombre.replace(/\s+/g, '_');
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 async function consultar() {
