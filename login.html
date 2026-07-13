@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingresar — Portal de Cliente</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif; background: linear-gradient(135deg, #1a5276, #2e86c1);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .card {
+    background: white; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    padding: 34px 30px; width: 100%; max-width: 380px;
+  }
+  .logo { font-size: 2.4rem; text-align: center; margin-bottom: 6px; }
+  h1 { text-align: center; font-size: 1.2rem; color: #1a5276; margin-bottom: 4px; }
+  p.sub { text-align: center; font-size: 0.85rem; color: #5d6d7e; margin-bottom: 22px; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: #5d6d7e;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+  }
+  .field input {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #d5d8dc; border-radius: 8px; font-size: 0.95rem;
+  }
+  .btn {
+    width: 100%; background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
+    border: none; border-radius: 8px; padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 6px;
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .msg { margin-top: 14px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+  .msg.err { color: #c0392b; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🌾</div>
+    <h1>Portal de Cliente</h1>
+    <p class="sub">Ingresá con tu usuario y contraseña</p>
+
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="usuario" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="password" autocomplete="current-password">
+    </div>
+    <button class="btn" id="btnLogin" onclick="login()">Ingresar</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+<script>
+// ⚠️ Misma URL que en las demás apps del sistema
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
+
+let jsonpCounter = 0;
+function jsonpScript(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + (jsonpCounter++);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tiempo de espera agotado')); }, 15000);
+    function cleanup() { clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    window[callbackName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('No se pudo conectar (script)')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + callbackName;
+    document.body.appendChild(script);
+  });
+}
+
+async function jsonpFetch(url) {
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function jsonp(url) {
+  try {
+    return await jsonpFetch(url);
+  } catch (errFetch) {
+    try {
+      return await jsonpScript(url);
+    } catch (errScript) {
+      throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
+    }
+  }
+}
+
+async function hashSHA256(texto) {
+  const enc = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function login() {
+  const btn = document.getElementById('btnLogin');
+  const msg = document.getElementById('msg');
+  const usuario = document.getElementById('usuario').value.trim();
+  const password = document.getElementById('password').value;
+  if (!usuario || !password) {
+    msg.textContent = '⚠️ Completá usuario y contraseña.';
+    msg.className = 'msg err';
+    return;
+  }
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const hash = await hashSHA256(password);
+    const url = SHEETS_URL + '?action=login&usuario=' + encodeURIComponent(usuario) + '&hash=' + encodeURIComponent(hash);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    localStorage.setItem('portalToken', data.token);
+    localStorage.setItem('portalCliente', data.cliente);
+    window.location.href = 'portal-cliente.html';
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+    btn.disabled = false;
+  }
+}
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+</script>
+</body>
+</html>
