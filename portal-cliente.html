@@ -221,7 +221,7 @@ function renderLabores(labores) {
         : '';
       return `
         <div class="lote-block">
-          <div class="lote-name">${escapeHtml(l.lote)} — ${escapeHtml(l.cultivo)} (${escapeHtml(l.ha)} ha)</div>
+          <div class="lote-name">${escapeHtml(l.lote)} — ${escapeHtml(l.cultivo)} (${escapeHtml(l.ha)} ha)${l.campo ? ` <span style="font-weight:400;color:#5d6d7e;font-size:0.78rem">· ${escapeHtml(l.campo)}</span>` : ''}</div>
           ${prodRows ? `<table><thead><tr><th>Producto</th><th>Dosis</th><th>Unidad</th></tr></thead><tbody>${prodRows}</tbody></table>` : ''}
           ${detalleTxt ? `<div class="obs">${escapeHtml(detalleTxt)}</div>` : ''}
         </div>
