@@ -295,6 +295,43 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Genera el logo AgroRaimondi como imagen PNG (para insertar en el PDF).
+function getLogoDataUrl() {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="360" height="120" viewBox="0 0 360 120">
+      <rect x="0" y="0" width="360" height="120" rx="16" fill="white"/>
+      <text x="180" y="36" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#C9A200" text-anchor="middle" letter-spacing="5">AGRO</text>
+      <text x="160" y="68" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="600" fill="#367C2B" text-anchor="end" letter-spacing="1">RAIMONDI</text>
+      <g transform="translate(170,44) scale(1.35)" fill="none" stroke="#367C2B" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="25" x2="12" y2="5"/>
+        <path d="M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7"/>
+        <path d="M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7"/>
+        <path d="M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13"/>
+        <path d="M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13"/>
+        <path d="M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19"/>
+        <path d="M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19"/>
+      </g>
+      <line x1="80" y1="88" x2="280" y2="88" stroke="rgba(54,124,43,0.3)" stroke-width="1"/>
+      <text x="180" y="103" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#4A8C3A" text-anchor="middle" letter-spacing="2">ASESORAMIENTO AGROPECUARIO</text>
+    </svg>
+  `;
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = 3;
+      const canvas = document.createElement('canvas');
+      canvas.width = 360 * scale;
+      canvas.height = 120 * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, 360, 120);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+  });
+}
+
 function getClienteActual() {
   const cliente = document.getElementById('cliente').value;
   return maestro.clientes.find(x => x.cliente === cliente);
@@ -458,6 +495,30 @@ function renderLotesDetalleLista() {
   filas.forEach(f => renderDetalleLote(f.id));
 }
 
+function copiarSelectorHtml(id) {
+  const otras = filas.filter(o => o.id !== id);
+  if (!otras.length) return '';
+  return `
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:0.75rem;font-weight:600;color:#5d6d7e;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;">🔁 Copiar de otro lote</label>
+      <select onchange="if(this.value){copiarDeFila('${id}', this.value);} this.value='';">
+        <option value="">— Elegir lote para copiar —</option>
+        ${otras.map(o => `<option value="${o.id}">${escapeHtml(o.lote)} — ${escapeHtml(o.campo)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+}
+
+function copiarDeFila(targetId, sourceId) {
+  const target = getFila(targetId);
+  const source = getFila(sourceId);
+  if (!target || !source) return;
+  target.productos = source.productos.map(p => ({ ...p }));
+  target.detalle = { ...source.detalle };
+  renderDetalleLote(targetId);
+  renderResumenProductos();
+}
+
 function renderDetalleLote(id) {
   const tipo = document.getElementById('tipo').value;
   const conf = CAMPOS_POR_TIPO[tipo];
@@ -467,25 +528,29 @@ function renderDetalleLote(id) {
 
   if (conf.modo === 'productos') {
     detalleEl.innerHTML = `
+      ${copiarSelectorHtml(id)}
       <div id="prods_${id}"></div>
       <button type="button" class="btn-add-prod" onclick="agregarProducto('${id}')">➕ Agregar producto</button>
     `;
     renderProductos(id);
   } else {
-    detalleEl.innerHTML = `<div class="campos-tipo">${conf.campos.map(c => {
-      const val = c.key === 'cultivoNuevo' ? (f.cultivoActual || '') : '';
-      if (c.type === 'select') {
+    detalleEl.innerHTML = `
+      ${copiarSelectorHtml(id)}
+      <div class="campos-tipo">${conf.campos.map(c => {
+        const val = c.key === 'cultivoNuevo' ? (f.cultivoActual || '') : (f.detalle[c.key] !== undefined ? f.detalle[c.key] : '');
+        if (c.type === 'select') {
+          return `<div class="form-group"><label>${c.label}</label>
+            <select onchange="setDetalle('${id}','${c.key}',this.value)">
+              ${c.options.map(o => `<option ${o === val ? 'selected' : ''}>${o}</option>`).join('')}
+            </select></div>`;
+        }
         return `<div class="form-group"><label>${c.label}</label>
-          <select onchange="setDetalle('${id}','${c.key}',this.value)">
-            ${c.options.map(o => `<option>${o}</option>`).join('')}
-          </select></div>`;
-      }
-      return `<div class="form-group"><label>${c.label}</label>
-        <input type="${c.type}" value="${escapeHtml(val)}" oninput="setDetalle('${id}','${c.key}',this.value)"></div>`;
-    }).join('')}</div>`;
+          <input type="${c.type}" value="${escapeHtml(val)}" oninput="setDetalle('${id}','${c.key}',this.value)"></div>`;
+      }).join('')}</div>
+    `;
     conf.campos.forEach(c => {
-      if (c.type === 'select') f.detalle[c.key] = c.options[0];
-      if (c.key === 'cultivoNuevo') f.detalle[c.key] = f.cultivoActual || '';
+      if (c.type === 'select' && f.detalle[c.key] === undefined) f.detalle[c.key] = c.options[0];
+      if (c.key === 'cultivoNuevo' && f.detalle[c.key] === undefined) f.detalle[c.key] = f.cultivoActual || '';
     });
   }
 }
@@ -756,61 +821,183 @@ async function confirmar() {
     const camposUnicos = [...new Set(filas.map(f => f.campo))];
     const campoLabel = camposUnicos.length === 1 ? camposUnicos[0] : camposUnicos.join(' + ');
 
-    // PDF
-    const doc = new jspdf.jsPDF();
-    doc.setFontSize(14);
-    doc.text('Planilla de Labores', 14, 16);
-    doc.setFontSize(10);
-    doc.text(`${cliente} — ${campoLabel}`, 14, 23);
-    doc.text(`Tipo: ${tipo}   Fecha: ${fecha}   Operador: ${operador}`, 14, 29);
+    // ── PDF (estilo AgroRaimondi, tonos verdes, ordenado por producto) ──
+    const logoDataUrl = await getLogoDataUrl().catch(() => null);
+    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    let cursorY = 35;
+    const VERDE       = [45, 95, 36];
+    const VERDE_CLARO = [227, 240, 221];
+    const GRIS        = [240, 244, 248];
+    const BLANCO      = [255, 255, 255];
+    const marginL = 14;
+    const pageW   = 210;
+    const cW      = pageW - marginL * 2;
+    const fechaFmt = fecha.split('-').reverse().join('/');
 
-    // Resumen por producto (totales ya con el ajuste por bidón aplicado, si hubo)
-    if (conf.modo === 'productos') {
-      const clavesProd = Object.keys(mapaOriginal);
-      if (clavesProd.length) {
-        const filasResumen = clavesProd.map(k => {
-          const prod = mapaOriginal[k];
-          const ajustado = acceptedTotals[k] !== undefined;
-          const totalFinal = ajustado ? acceptedTotals[k] : prod.total;
-          const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
-          const nEnvases = envase > 0 ? Math.round((totalFinal / envase) * 100) / 100 : '';
-          return [prod.nombre, prod.unidad, totalFinal.toFixed(2), envase, nEnvases];
-        });
-        doc.setFontSize(11);
-        doc.text('Resumen por producto', 14, cursorY);
-        doc.autoTable({
-          startY: cursorY + 3,
-          head: [['Producto', 'Unidad', 'Total', 'Envase', 'N° envases']],
-          body: filasResumen,
-          styles: { fontSize: 8 }
-        });
-        cursorY = doc.lastAutoTable.finalY + 10;
+    function drawPageHeader() {
+      doc.setFillColor(...VERDE);
+      doc.rect(0, 0, pageW, 26, 'F');
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, 'PNG', pageW - marginL - 32, 3, 32, 10.7);
       }
+      doc.setTextColor(...BLANCO);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('Planilla de Labores', marginL, 11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const meta = [cliente, campoLabel, tipo, fechaFmt, operador].filter(Boolean).join('  |  ');
+      doc.text(meta, marginL, 19);
+      doc.setTextColor(0, 0, 0);
     }
 
-    const filasPdf = [];
-    lotesPayload.forEach(l => {
-      if (l.productos.length) {
-        l.productos.forEach(p => filasPdf.push([l.campo, l.lote, l.cultivo, l.ha, p.nombre, p.dosis + ' ' + p.unidad]));
-      } else {
+    function drawPageFooter(pageNum, totalPages) {
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Pagina ${pageNum} / ${totalPages}`, pageW - marginL, 290, { align: 'right' });
+      if (observaciones) doc.text(`Obs: ${observaciones}`, marginL, 290);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    let y = 32;
+    drawPageHeader();
+
+    if (conf.modo === 'productos') {
+      // ── SECCIÓN: APLICACION POR PRODUCTO
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('APLICACION POR PRODUCTO', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const clavesProd = Object.keys(mapaOriginal);
+      clavesProd.forEach(k => {
+        const prod = mapaOriginal[k];
+        const factor = calcularFactor(k, mapaOriginal);
+        const unidS = prod.unidad.split('/')[0];
+
+        if (y > 250) { doc.addPage(); drawPageHeader(); y = 32; }
+
+        doc.setFillColor(...VERDE);
+        doc.roundedRect(marginL, y, cW, 8, 1.5, 1.5, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...BLANCO);
+        doc.text(prod.nombre, marginL + 3, y + 5.5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.text(`unidad: ${prod.unidad}`, marginL + 75, y + 5.5);
+        doc.setTextColor(0, 0, 0);
+        y += 10;
+
+        const rows = prod.lotes.map(l => [
+          `${l.loteId} (${l.campo})`, l.cultivo, l.ha, (l.dosis * factor).toFixed(3), (l.subtotal * factor).toFixed(2) + ' ' + unidS
+        ]);
+        const totalHa = prod.lotes.reduce((s, l) => s + parseFloat(l.ha || 0), 0);
+        const totalFinal = acceptedTotals[k] !== undefined ? acceptedTotals[k] : prod.total;
+        rows.push(['TOTAL', '—', totalHa, '—', totalFinal.toFixed(2) + ' ' + unidS]);
+
+        doc.autoTable({
+          head: [['Lote (Campo)', 'Cultivo', 'Ha', 'Dosis/ha', 'Total']],
+          body: rows,
+          startY: y,
+          margin: { left: marginL, right: marginL },
+          styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 } },
+          headStyles: { fillColor: VERDE_CLARO, textColor: VERDE, fontStyle: 'bold', fontSize: 8.5 },
+          columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } },
+          willDrawCell(data) {
+            if (data.section === 'body' && data.row.index === rows.length - 1) {
+              data.cell.styles.fillColor = VERDE;
+              data.cell.styles.textColor = BLANCO;
+              data.cell.styles.fontStyle = 'bold';
+            }
+          },
+          alternateRowStyles: { fillColor: [248, 251, 248] },
+          theme: 'plain',
+          tableLineColor: [220, 220, 220],
+          tableLineWidth: 0.2,
+        });
+        y = doc.lastAutoTable.finalY + 7;
+      });
+
+      // ── SECCIÓN: TOTAL DE PRODUCTOS A COMPRAR / STOCK
+      if (y > 220) { doc.addPage(); drawPageHeader(); y = 32; }
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('TOTAL DE PRODUCTOS A COMPRAR / STOCK', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const stockRows = clavesProd.map(k => {
+        const prod = mapaOriginal[k];
+        const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
+        const totalForCalc = acceptedTotals[k] !== undefined ? acceptedTotals[k] : Math.round(prod.total * 100) / 100;
+        const envases = envase > 0 ? Math.ceil(totalForCalc / envase) : 0;
+        const totalAj = envases * envase;
+        const unidS = prod.unidad.split('/')[0];
+        const sobrante = totalAj - totalForCalc;
+        return [
+          prod.nombre, prod.unidad, prod.total.toFixed(2) + ' ' + unidS,
+          `${envase} ${unidS}`, `${envases} envase${envases !== 1 ? 's' : ''}`,
+          totalAj.toFixed(2) + ' ' + unidS,
+          sobrante < 0.005 ? 'Exacto' : '+' + sobrante.toFixed(2) + ' ' + unidS
+        ];
+      });
+
+      doc.autoTable({
+        head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a comprar', 'Sobrante']],
+        body: stockRows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 9, cellPadding: { top: 3, bottom: 3, left: 3, right: 3 } },
+        headStyles: { fillColor: VERDE, textColor: BLANCO, fontStyle: 'bold', fontSize: 8.5 },
+        columnStyles: {
+          0: { fontStyle: 'bold' }, 2: { halign: 'right' }, 3: { halign: 'center' },
+          4: { halign: 'center', fontStyle: 'bold' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' }
+        },
+        willDrawCell(data) {
+          if (data.section !== 'body') return;
+          if (data.column.index === 6) {
+            if (data.cell.raw === 'Exacto') { data.cell.styles.textColor = [27, 132, 73]; data.cell.styles.fontStyle = 'bold'; }
+            else data.cell.styles.textColor = [154, 96, 5];
+          }
+          if (data.column.index === 4) { data.cell.styles.fillColor = [237, 247, 230]; data.cell.styles.textColor = [45, 95, 36]; }
+        },
+        alternateRowStyles: { fillColor: [248, 251, 248] },
+        theme: 'plain',
+        tableLineColor: [220, 220, 220],
+        tableLineWidth: 0.2,
+      });
+      y = doc.lastAutoTable.finalY + 9;
+    } else {
+      // Tipos sin productos (Siembra / Cosecha / Disco / Cultivador): detalle simple por lote
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('DETALLE POR LOTE', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const rows = lotesPayload.map(l => {
         const detalleTxt = Object.keys(l.detalle || {}).map(k => k + ': ' + l.detalle[k]).join(' · ');
-        filasPdf.push([l.campo, l.lote, l.cultivo, l.ha, detalleTxt, '']);
-      }
-    });
+        return [l.campo, l.lote, l.cultivo, l.ha, detalleTxt];
+      });
+      doc.autoTable({
+        head: [['Campo', 'Lote', 'Cultivo', 'Ha', 'Detalle']],
+        body: rows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: VERDE_CLARO, textColor: VERDE, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 251, 248] },
+        theme: 'plain',
+      });
+      y = doc.lastAutoTable.finalY + 9;
+    }
 
-    doc.setFontSize(11);
-    doc.text('Detalle por lote', 14, cursorY);
-    doc.autoTable({
-      startY: cursorY + 3,
-      head: [['Campo', 'Lote', 'Cultivo', 'Ha', 'Producto / Detalle', 'Dosis']],
-      body: filasPdf,
-      styles: { fontSize: 8 }
-    });
-
-    if (observaciones) {
-      doc.text('Observaciones: ' + observaciones, 14, doc.lastAutoTable.finalY + 8);
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      drawPageFooter(i, totalPages);
     }
 
     const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
