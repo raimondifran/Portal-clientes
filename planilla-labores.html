@@ -579,7 +579,9 @@ function renderResumenProductos() {
     const prod = mapa[k];
     const unidS = prod.unidad.split('/')[0];
     const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
-    const displayTotal = acceptedTotals[k] !== undefined ? acceptedTotals[k] : prod.total;
+    const ajustado = acceptedTotals[k] !== undefined;
+    const displayTotal = ajustado ? acceptedTotals[k] : prod.total;
+    const factor = calcularFactor(k, mapa);
 
     const filasHtml = prod.lotes.map(l => `
       <tr>
@@ -587,7 +589,8 @@ function renderResumenProductos() {
         <td>${escapeHtml(l.cultivo)}</td>
         <td class="num">${escapeHtml(l.ha)}</td>
         <td class="num">${l.dosis.toFixed(3)}</td>
-        <td class="num">${l.subtotal.toFixed(2)}</td>
+        ${ajustado ? `<td class="num">${(l.dosis * factor).toFixed(3)}</td>` : ''}
+        <td class="num">${(l.subtotal * factor).toFixed(2)}</td>
       </tr>
     `).join('');
 
@@ -598,10 +601,10 @@ function renderResumenProductos() {
           <span style="font-size:0.8rem;color:#5d6d7e;font-weight:400">unidad: ${escapeHtml(prod.unidad)}</span>
         </div>
         <table class="resumen-table">
-          <thead><tr><th>Lote (Campo)</th><th>Cultivo</th><th>Ha</th><th>Dosis ${escapeHtml(prod.unidad)}</th><th>Total ${escapeHtml(unidS)}</th></tr></thead>
+          <thead><tr><th>Lote (Campo)</th><th>Cultivo</th><th>Ha</th><th>Dosis cargada</th>${ajustado ? '<th>Dosis ajustada</th>' : ''}<th>Total ${escapeHtml(unidS)}</th></tr></thead>
           <tbody>
             ${filasHtml}
-            <tr class="total-row"><td colspan="2">TOTAL</td><td class="num">${prod.lotes.reduce((s,l)=>s+parseFloat(l.ha||0),0)}</td><td>—</td><td class="num">${displayTotal.toFixed(2)} ${unidS}</td></tr>
+            <tr class="total-row"><td colspan="2">TOTAL</td><td class="num">${prod.lotes.reduce((s,l)=>s+parseFloat(l.ha||0),0)}</td><td>—</td>${ajustado ? '<td>—</td>' : ''}<td class="num">${displayTotal.toFixed(2)} ${unidS}</td></tr>
           </tbody>
         </table>
         <div class="envase-box">
@@ -610,7 +613,8 @@ function renderResumenProductos() {
             <input type="number" class="envase-input" id="env-${k}" value="${envase}" min="0.1" step="0.5"
               oninput="recalcEnvase('${k}')" onchange="recalcEnvase('${k}')">
             <span style="font-size:0.82rem;color:#5d6d7e;font-weight:600">${unidS}</span>
-            <span class="total-actual-chip">Total actual: ${displayTotal.toFixed(2)} ${unidS}</span>
+            <span class="total-actual-chip">${ajustado ? 'Total ajustado' : 'Total sin ajustar'}: ${displayTotal.toFixed(2)} ${unidS}</span>
+            ${ajustado ? `<button type="button" class="btn-opcion" style="width:auto;background:#5d6d7e" onclick="deshacerAjuste('${k}')">↩️ Deshacer ajuste</button>` : ''}
           </div>
           <div id="envres-${k}">${buildEnvaseChips(k, prod.total, envase, prod.unidad)}</div>
         </div>
@@ -678,25 +682,27 @@ function recalcEnvase(k) {
   if (el) el.innerHTML = buildEnvaseChips(k, prod.total, envase, prod.unidad);
 }
 
+// El ajuste por bidón NO modifica la dosis cargada en cada lote —
+// solo guarda el total aceptado. La dosis final ajustada se calcula
+// al momento de mostrar/guardar (ver calcularFactor / confirmar()).
+// Así, "Deshacer ajuste" siempre puede volver al valor original.
 function aceptarAjuste(k, newTotal) {
   const mapa = calcularMapaProductos();
   const prod = mapa[k];
   if (!prod || !newTotal || prod.total <= 0) return;
-  const sf = newTotal / prod.total;
-
-  filas.forEach(f => {
-    (f.productos || []).forEach(p => {
-      if (!p.nombre || eKey(p.nombre, p.unidad) !== k) return;
-      if (!p.dosis || parseFloat(p.dosis) <= 0) return;
-      p.dosis = (parseFloat(p.dosis) * sf).toFixed(4);
-    });
-  });
   acceptedTotals[k] = newTotal;
-
-  filas.forEach(f => {
-    if (document.getElementById('prods_' + f.id)) renderProductosSinResumen(f.id);
-  });
   renderResumenProductos();
+}
+
+function deshacerAjuste(k) {
+  delete acceptedTotals[k];
+  renderResumenProductos();
+}
+
+function calcularFactor(k, mapa) {
+  const prod = mapa[k];
+  if (!prod || acceptedTotals[k] === undefined || prod.total <= 0) return 1;
+  return acceptedTotals[k] / prod.total;
 }
 
 async function confirmar() {
@@ -725,9 +731,19 @@ async function confirmar() {
 
   try {
     const conf = CAMPOS_POR_TIPO[tipo];
+    // Mapa de productos ANTES de aplicar el ajuste, para calcular el factor
+    // de cada producto ajustado (redondeo por bidón) al momento de guardar.
+    const mapaOriginal = calcularMapaProductos();
+
     const lotesPayload = filas.map(f => {
       const productos = conf.modo === 'productos'
-        ? f.productos.filter(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0)
+        ? f.productos
+            .filter(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0)
+            .map(p => {
+              const k = eKey(p.nombre, p.unidad);
+              const factor = calcularFactor(k, mapaOriginal);
+              return { nombre: p.nombre, dosis: (parseFloat(p.dosis) * factor).toFixed(4), unidad: p.unidad };
+            })
         : [];
       const cultivoFinal = (conf.modo === 'campos' && f.detalle.cultivoNuevo) ? f.detalle.cultivoNuevo : f.cultivoActual;
       return {
@@ -740,13 +756,39 @@ async function confirmar() {
     const camposUnicos = [...new Set(filas.map(f => f.campo))];
     const campoLabel = camposUnicos.length === 1 ? camposUnicos[0] : camposUnicos.join(' + ');
 
-    // PDF simple
+    // PDF
     const doc = new jspdf.jsPDF();
     doc.setFontSize(14);
     doc.text('Planilla de Labores', 14, 16);
     doc.setFontSize(10);
     doc.text(`${cliente} — ${campoLabel}`, 14, 23);
     doc.text(`Tipo: ${tipo}   Fecha: ${fecha}   Operador: ${operador}`, 14, 29);
+
+    let cursorY = 35;
+
+    // Resumen por producto (totales ya con el ajuste por bidón aplicado, si hubo)
+    if (conf.modo === 'productos') {
+      const clavesProd = Object.keys(mapaOriginal);
+      if (clavesProd.length) {
+        const filasResumen = clavesProd.map(k => {
+          const prod = mapaOriginal[k];
+          const ajustado = acceptedTotals[k] !== undefined;
+          const totalFinal = ajustado ? acceptedTotals[k] : prod.total;
+          const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
+          const nEnvases = envase > 0 ? Math.round((totalFinal / envase) * 100) / 100 : '';
+          return [prod.nombre, prod.unidad, totalFinal.toFixed(2), envase, nEnvases];
+        });
+        doc.setFontSize(11);
+        doc.text('Resumen por producto', 14, cursorY);
+        doc.autoTable({
+          startY: cursorY + 3,
+          head: [['Producto', 'Unidad', 'Total', 'Envase', 'N° envases']],
+          body: filasResumen,
+          styles: { fontSize: 8 }
+        });
+        cursorY = doc.lastAutoTable.finalY + 10;
+      }
+    }
 
     const filasPdf = [];
     lotesPayload.forEach(l => {
@@ -758,8 +800,10 @@ async function confirmar() {
       }
     });
 
+    doc.setFontSize(11);
+    doc.text('Detalle por lote', 14, cursorY);
     doc.autoTable({
-      startY: 35,
+      startY: cursorY + 3,
       head: [['Campo', 'Lote', 'Cultivo', 'Ha', 'Producto / Detalle', 'Dosis']],
       body: filasPdf,
       styles: { fontSize: 8 }
