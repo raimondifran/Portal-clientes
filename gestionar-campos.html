@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestionar Campos y Rotación</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, #1a5276, #2e86c1);
+    color: white; padding: 18px 30px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header .logo { font-size: 2rem; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+  .container { max-width: 1000px; margin: 28px auto; padding: 0 18px; display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+  @media (max-width: 800px) { .container { grid-template-columns: 1fr; } }
+  .card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 20px 22px; margin-bottom: 18px;
+  }
+  .card-title {
+    font-size: 1rem; font-weight: 700; color: #1a5276;
+    margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #d6eaf8;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: #5d6d7e;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+  }
+  .field select, .field input {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #d5d8dc; border-radius: 8px;
+    font-size: 0.93rem; background: #fff;
+  }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .btn {
+    background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
+    border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem;
+    font-weight: 700; cursor: pointer; width: 100%; margin-top: 4px;
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary {
+    background: #eef4fa; color: #1a5276; border: 1.5px solid #d6eaf8;
+  }
+  .msg { margin-top: 10px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+  .msg.ok { color: #27ae60; }
+  .msg.err { color: #c0392b; }
+  .tree-cliente { margin-bottom: 14px; }
+  .tree-cliente-name { font-weight: 700; color: #1a5276; font-size: 0.98rem; margin-bottom: 6px; }
+  .tree-campo { margin-left: 14px; margin-bottom: 8px; }
+  .tree-campo-name { font-weight: 600; font-size: 0.88rem; color: #2e86c1; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-left: 14px; width: calc(100% - 14px); }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef1f4; }
+  th { color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+  .edit-link { color: #2e86c1; cursor: pointer; font-size: 0.78rem; font-weight: 600; }
+  .empty, .loading { text-align: center; padding: 30px; color: #5d6d7e; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab-btn {
+    flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #d5d8dc; background: #fff;
+    cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #5d6d7e;
+  }
+  .tab-btn.active { background: #1a5276; color: white; border-color: #1a5276; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🗂️</div>
+  <div>
+    <h1>Gestionar Campos y Rotación</h1>
+    <p>Alta de clientes/campos/lotes y actualización del cultivo por lote</p>
+  </div>
+</header>
+
+<div class="container">
+  <div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-btn active" id="tabAgregar" onclick="cambiarTab('agregar')">➕ Agregar</button>
+        <button class="tab-btn" id="tabEditar" onclick="cambiarTab('editar')">✏️ Rotación</button>
+        <button class="tab-btn" id="tabUsuarios" onclick="cambiarTab('usuarios')">🔑 Usuarios</button>
+      </div>
+
+      <!-- PANEL AGREGAR -->
+      <div class="panel active" id="panelAgregar">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="ag_clienteSelect" onchange="onClienteSelect()">
+            <option value="">— Nuevo cliente —</option>
+          </select>
+          <input type="text" id="ag_clienteNuevo" placeholder="Nombre del cliente nuevo" style="margin-top:6px;">
+        </div>
+        <div class="field">
+          <label>Campo</label>
+          <select id="ag_campoSelect" onchange="onCampoSelect()">
+            <option value="">— Nuevo campo —</option>
+          </select>
+          <input type="text" id="ag_campoNuevo" placeholder="Nombre del campo nuevo" style="margin-top:6px;">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Lote (opcional)</label>
+            <input type="text" id="ag_lote" placeholder="Ej: Lote 4">
+          </div>
+          <div class="field">
+            <label>Ha</label>
+            <input type="number" id="ag_ha" placeholder="Ej: 55" step="0.01">
+          </div>
+        </div>
+        <div class="field">
+          <label>Cultivo</label>
+          <input type="text" id="ag_cultivo" placeholder="Ej: Soja">
+        </div>
+        <button class="btn" id="btnAgregar" onclick="guardarAlta()">💾 Guardar</button>
+        <div class="msg" id="msgAgregar"></div>
+      </div>
+
+      <!-- PANEL EDITAR ROTACIÓN -->
+      <div class="panel" id="panelEditar">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="ed_clienteSelect" onchange="onEditClienteSelect()">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Campo</label>
+          <select id="ed_campoSelect" onchange="onEditCampoSelect()">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Lote</label>
+          <select id="ed_loteSelect" onchange="onEditLoteSelect()">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nuevo cultivo</label>
+          <input type="text" id="ed_cultivo" placeholder="Ej: Maíz">
+        </div>
+        <div class="field">
+          <label>Ha (opcional, para corregir)</label>
+          <input type="number" id="ed_ha" step="0.01">
+        </div>
+        <button class="btn" id="btnEditar" onclick="guardarEdicion()">🔄 Actualizar rotación</button>
+        <div class="msg" id="msgEditar"></div>
+      </div>
+
+      <!-- PANEL USUARIOS -->
+      <div class="panel" id="panelUsuarios">
+        <div class="field">
+          <label>Tipo de acceso</label>
+          <select id="us_rol" onchange="onRolChange()">
+            <option value="cliente">Cliente (ve solo sus datos)</option>
+            <option value="operador">Operador de campo (carga labores)</option>
+          </select>
+        </div>
+        <div class="field" id="us_clienteField">
+          <label>Cliente</label>
+          <select id="us_clienteSelect">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Usuario</label>
+          <input type="text" id="us_usuario" placeholder="Ej: lamas1" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <input type="password" id="us_password" autocomplete="new-password">
+        </div>
+        <button class="btn" id="btnUsuario" onclick="crearUsuario()">🔑 Crear acceso</button>
+        <div class="msg" id="msgUsuario"></div>
+        <div style="margin-top:14px;font-size:0.78rem;color:#5d6d7e;" id="us_ayuda">
+          Compartile al cliente el link de <code>login.html</code> con este usuario y contraseña. Va a ver solo los datos de su cliente.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title">📋 Clientes / Campos / Lotes actuales</div>
+      <div id="arbol"><div class="loading">Cargando…</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ⚠️ Misma URL que en las planillas de fumigación
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
+
+let maestro = { clientes: [] };
+let jsonpCounter = 0;
+
+function jsonpScript(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + (jsonpCounter++);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tiempo de espera agotado')); }, 15000);
+    function cleanup() { clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    window[callbackName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('No se pudo conectar (script)')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + callbackName;
+    document.body.appendChild(script);
+  });
+}
+
+async function jsonpFetch(url) {
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function jsonp(url) {
+  try {
+    return await jsonpFetch(url);
+  } catch (errFetch) {
+    try {
+      return await jsonpScript(url);
+    } catch (errScript) {
+      throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
+    }
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function cambiarTab(tab) {
+  document.getElementById('tabAgregar').classList.toggle('active', tab === 'agregar');
+  document.getElementById('tabEditar').classList.toggle('active', tab === 'editar');
+  document.getElementById('tabUsuarios').classList.toggle('active', tab === 'usuarios');
+  document.getElementById('panelAgregar').classList.toggle('active', tab === 'agregar');
+  document.getElementById('panelEditar').classList.toggle('active', tab === 'editar');
+  document.getElementById('panelUsuarios').classList.toggle('active', tab === 'usuarios');
+}
+
+async function hashSHA256(texto) {
+  const enc = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function poblarSelectUsuarios() {
+  const sel = document.getElementById('us_clienteSelect');
+  sel.innerHTML = '<option value="">Seleccionar…</option>' +
+    maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
+}
+
+function onRolChange() {
+  const rol = document.getElementById('us_rol').value;
+  const esCliente = rol === 'cliente';
+  document.getElementById('us_clienteField').style.display = esCliente ? 'block' : 'none';
+  document.getElementById('us_ayuda').innerHTML = esCliente
+    ? 'Compartile al cliente el link de <code>login.html</code> con este usuario y contraseña. Va a ver solo los datos de su cliente.'
+    : 'Compartile al operador el link de <code>staff-login.html</code> con este usuario y contraseña. Va a poder cargar labores para cualquier cliente/campo, y quedará registrado con su usuario.';
+}
+
+async function crearUsuario() {
+  const btn = document.getElementById('btnUsuario');
+  const msg = document.getElementById('msgUsuario');
+  const rol = document.getElementById('us_rol').value;
+  const cliente = document.getElementById('us_clienteSelect').value;
+  const usuario = document.getElementById('us_usuario').value.trim();
+  const password = document.getElementById('us_password').value;
+
+  if (!usuario || !password || (rol === 'cliente' && !cliente)) {
+    msg.textContent = '⚠️ Completá los datos requeridos (usuario, contraseña' + (rol === 'cliente' ? ' y cliente' : '') + ').';
+    msg.className = 'msg err';
+    return;
+  }
+  if (password.length < 4) {
+    msg.textContent = '⚠️ La contraseña debe tener al menos 4 caracteres.';
+    msg.className = 'msg err';
+    return;
+  }
+
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const hash = await hashSHA256(password);
+    const payload = JSON.stringify({ usuario, hash, cliente: rol === 'cliente' ? cliente : '', rol });
+    const url = SHEETS_URL + '?action=crearUsuario&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    msg.textContent = rol === 'cliente'
+      ? `✅ Acceso creado para "${usuario}" (cliente: ${cliente}).`
+      : `✅ Acceso de operador creado para "${usuario}".`;
+    msg.className = 'msg ok';
+    document.getElementById('us_usuario').value = '';
+    document.getElementById('us_password').value = '';
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function cargarMaestro() {
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=maestro');
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    maestro = data;
+    poblarSelectsAgregar();
+    poblarSelectsEditar();
+    poblarSelectUsuarios();
+    renderArbol();
+  } catch (err) {
+    document.getElementById('arbol').innerHTML = '<div class="empty">⚠️ ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function poblarSelectsAgregar() {
+  const sel = document.getElementById('ag_clienteSelect');
+  sel.innerHTML = '<option value="">— Nuevo cliente —</option>' +
+    maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
+  onClienteSelect();
+}
+
+function onClienteSelect() {
+  const cliente = document.getElementById('ag_clienteSelect').value;
+  const nuevoInput = document.getElementById('ag_clienteNuevo');
+  nuevoInput.style.display = cliente ? 'none' : 'block';
+
+  const campoSel = document.getElementById('ag_campoSelect');
+  const c = maestro.clientes.find(x => x.cliente === cliente);
+  campoSel.innerHTML = '<option value="">— Nuevo campo —</option>' +
+    (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
+  onCampoSelect();
+}
+
+function onCampoSelect() {
+  const campo = document.getElementById('ag_campoSelect').value;
+  document.getElementById('ag_campoNuevo').style.display = campo ? 'none' : 'block';
+}
+
+function poblarSelectsEditar() {
+  const sel = document.getElementById('ed_clienteSelect');
+  sel.innerHTML = '<option value="">Seleccionar…</option>' +
+    maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
+}
+
+function onEditClienteSelect() {
+  const cliente = document.getElementById('ed_clienteSelect').value;
+  const c = maestro.clientes.find(x => x.cliente === cliente);
+  const campoSel = document.getElementById('ed_campoSelect');
+  campoSel.innerHTML = '<option value="">Seleccionar…</option>' +
+    (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
+  document.getElementById('ed_loteSelect').innerHTML = '<option value="">Seleccionar…</option>';
+}
+
+function onEditCampoSelect() {
+  const cliente = document.getElementById('ed_clienteSelect').value;
+  const campo = document.getElementById('ed_campoSelect').value;
+  const c = maestro.clientes.find(x => x.cliente === cliente);
+  const cp = c && c.campos.find(x => x.campo === campo);
+  const loteSel = document.getElementById('ed_loteSelect');
+  loteSel.innerHTML = '<option value="">Seleccionar…</option>' +
+    (cp ? cp.lotes.map(l => `<option value="${escapeHtml(l.lote)}">${escapeHtml(l.lote)} (${escapeHtml(l.cultivo)})</option>`).join('') : '');
+}
+
+function onEditLoteSelect() {
+  const cliente = document.getElementById('ed_clienteSelect').value;
+  const campo = document.getElementById('ed_campoSelect').value;
+  const lote = document.getElementById('ed_loteSelect').value;
+  const c = maestro.clientes.find(x => x.cliente === cliente);
+  const cp = c && c.campos.find(x => x.campo === campo);
+  const l = cp && cp.lotes.find(x => x.lote === lote);
+  document.getElementById('ed_cultivo').value = l ? l.cultivo : '';
+  document.getElementById('ed_ha').value = l ? l.ha : '';
+}
+
+function renderArbol() {
+  const el = document.getElementById('arbol');
+  if (!maestro.clientes.length) {
+    el.innerHTML = '<div class="empty">Todavía no hay clientes cargados.</div>';
+    return;
+  }
+  el.innerHTML = maestro.clientes.map(c => `
+    <div class="tree-cliente">
+      <div class="tree-cliente-name">👤 ${escapeHtml(c.cliente)}</div>
+      ${c.campos.map(cp => `
+        <div class="tree-campo">
+          <div class="tree-campo-name">🌾 ${escapeHtml(cp.campo)} (${cp.lotes.length} lote${cp.lotes.length === 1 ? '' : 's'})</div>
+          ${cp.lotes.length ? `<table>
+            <thead><tr><th>Lote</th><th>Cultivo</th><th>Ha</th></tr></thead>
+            <tbody>
+              ${cp.lotes.map(l => `<tr><td>${escapeHtml(l.lote)}</td><td>${escapeHtml(l.cultivo)}</td><td>${escapeHtml(l.ha)}</td></tr>`).join('')}
+            </tbody>
+          </table>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+async function guardarAlta() {
+  const btn = document.getElementById('btnAgregar');
+  const msg = document.getElementById('msgAgregar');
+  const clienteSel = document.getElementById('ag_clienteSelect').value;
+  const clienteNuevo = document.getElementById('ag_clienteNuevo').value.trim();
+  const cliente = clienteSel || clienteNuevo;
+  const campoSel = document.getElementById('ag_campoSelect').value;
+  const campoNuevo = document.getElementById('ag_campoNuevo').value.trim();
+  const campo = campoSel || campoNuevo;
+  const lote = document.getElementById('ag_lote').value.trim();
+  const ha = document.getElementById('ag_ha').value;
+  const cultivo = document.getElementById('ag_cultivo').value.trim();
+
+  if (!cliente || !campo) {
+    msg.textContent = '⚠️ Cliente y campo son obligatorios.';
+    msg.className = 'msg err';
+    return;
+  }
+
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const payload = JSON.stringify({ cliente, campo, lote, cultivo, ha });
+    const url = SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    msg.textContent = '✅ Guardado correctamente.';
+    msg.className = 'msg ok';
+    document.getElementById('ag_clienteNuevo').value = '';
+    document.getElementById('ag_campoNuevo').value = '';
+    document.getElementById('ag_lote').value = '';
+    document.getElementById('ag_ha').value = '';
+    document.getElementById('ag_cultivo').value = '';
+    await cargarMaestro();
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function guardarEdicion() {
+  const btn = document.getElementById('btnEditar');
+  const msg = document.getElementById('msgEditar');
+  const cliente = document.getElementById('ed_clienteSelect').value;
+  const campo = document.getElementById('ed_campoSelect').value;
+  const lote = document.getElementById('ed_loteSelect').value;
+  const cultivo = document.getElementById('ed_cultivo').value.trim();
+  const ha = document.getElementById('ed_ha').value;
+
+  if (!cliente || !campo || !lote) {
+    msg.textContent = '⚠️ Elegí cliente, campo y lote.';
+    msg.className = 'msg err';
+    return;
+  }
+
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const payload = JSON.stringify({ cliente, campo, lote, cultivo, ha });
+    const url = SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    msg.textContent = '✅ Rotación actualizada.';
+    msg.className = 'msg ok';
+    await cargarMaestro();
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+cargarMaestro();
+</script>
+</body>
+</html>

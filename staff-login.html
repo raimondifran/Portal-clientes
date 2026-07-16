@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ingresar — Carga de Labores</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif; color: #1e2b1a;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    background: #f4f7f1;
+    background-image:
+      radial-gradient(circle at 100% 0%, rgba(54,124,43,0.10), transparent 45%),
+      radial-gradient(circle at 0% 100%, rgba(201,162,0,0.08), transparent 40%);
+    position: relative; overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; top: -60px; right: -100px; width: 560px; height: 560px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26' fill='none' stroke='%23367C2B' stroke-width='0.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='25' x2='12' y2='5'/%3E%3Cpath d='M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7'/%3E%3Cpath d='M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7'/%3E%3Cpath d='M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13'/%3E%3Cpath d='M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13'/%3E%3Cpath d='M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19'/%3E%3Cpath d='M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19'/%3E%3C/svg%3E") no-repeat center / contain;
+    opacity: 0.07; pointer-events: none;
+  }
+  body::after {
+    content: '';
+    position: fixed; bottom: -80px; left: -100px; width: 420px; height: 420px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26' fill='none' stroke='%23C9A200' stroke-width='0.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='25' x2='12' y2='5'/%3E%3Cpath d='M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7'/%3E%3Cpath d='M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7'/%3E%3Cpath d='M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13'/%3E%3Cpath d='M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13'/%3E%3Cpath d='M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19'/%3E%3Cpath d='M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19'/%3E%3C/svg%3E") no-repeat center / contain;
+    opacity: 0.06; pointer-events: none; transform: rotate(20deg);
+  }
+  .card {
+    background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(45,95,36,0.18);
+    padding: 34px 30px; width: 100%; max-width: 380px;
+    border-top: 4px solid #367C2B; position: relative; z-index: 1;
+  }
+  .logo-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+  h1 { text-align: center; font-size: 1.2rem; color: #1e2b1a; margin-bottom: 4px; }
+  p.sub { text-align: center; font-size: 0.85rem; color: #5d6d7e; margin-bottom: 22px; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: #5d6d7e;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+  }
+  .field input {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #d9e2d3; border-radius: 8px; font-size: 0.95rem;
+  }
+  .field input:focus { outline: none; border-color: #4a8c3a; }
+  .btn {
+    width: 100%; background: linear-gradient(135deg, #2d5f24, #4a8c3a); color: white;
+    border: none; border-radius: 8px; padding: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 6px;
+    box-shadow: 0 2px 8px rgba(45,95,36,0.25);
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .msg { margin-top: 14px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+  .msg.err { color: #c0392b; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-wrap">
+      <div style="display: inline-block; text-align: center;">
+        <div style="font-family: system-ui, -apple-system, Arial, sans-serif; font-size: 12px; font-weight: 500; color: #C9A200; letter-spacing: 4px; margin-bottom: 3px;">AGRO</div>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span style="font-family: system-ui, -apple-system, Arial, sans-serif; font-size: 23px; font-weight: 500; color: #367C2B; letter-spacing: 1px; line-height: 1;">RAIMONDI</span>
+          <svg width="20" height="22" viewBox="0 0 24 26" fill="none" stroke="#367C2B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <line x1="12" y1="25" x2="12" y2="5"/>
+            <path d="M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7"/>
+            <path d="M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7"/>
+            <path d="M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13"/>
+            <path d="M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13"/>
+            <path d="M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19"/>
+            <path d="M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19"/>
+          </svg>
+        </div>
+        <div style="border-top: 0.5px solid rgba(54,124,43,0.3); margin-top: 3px; padding-top: 3px; font-family: system-ui, -apple-system, Arial, sans-serif; font-size: 8px; color: #4A8C3A; letter-spacing: 1.2px;">ASESORAMIENTO AGROPECUARIO</div>
+      </div>
+    </div>
+    <h1>Carga de Labores</h1>
+    <p class="sub">Ingresá con tu usuario de operador de campo</p>
+
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="usuario" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="password" autocomplete="current-password">
+    </div>
+    <button class="btn" id="btnLogin" onclick="login()">Ingresar</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+<script>
+// ⚠️ Misma URL que en las demás apps del sistema
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
+
+let jsonpCounter = 0;
+function jsonpScript(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + (jsonpCounter++);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tiempo de espera agotado')); }, 15000);
+    function cleanup() { clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    window[callbackName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('No se pudo conectar (script)')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + callbackName;
+    document.body.appendChild(script);
+  });
+}
+
+async function jsonpFetch(url) {
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function jsonp(url) {
+  try {
+    return await jsonpFetch(url);
+  } catch (errFetch) {
+    try {
+      return await jsonpScript(url);
+    } catch (errScript) {
+      throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
+    }
+  }
+}
+
+async function hashSHA256(texto) {
+  const enc = new TextEncoder().encode(texto);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function login() {
+  const btn = document.getElementById('btnLogin');
+  const msg = document.getElementById('msg');
+  const usuario = document.getElementById('usuario').value.trim();
+  const password = document.getElementById('password').value;
+  if (!usuario || !password) {
+    msg.textContent = '⚠️ Completá usuario y contraseña.';
+    msg.className = 'msg err';
+    return;
+  }
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const hash = await hashSHA256(password);
+    const url = SHEETS_URL + '?action=login&usuario=' + encodeURIComponent(usuario) + '&hash=' + encodeURIComponent(hash);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    if (data.rol !== 'operador') {
+      throw new Error('Este usuario no tiene permiso para cargar labores.');
+    }
+    localStorage.setItem('staffToken', data.token);
+    localStorage.setItem('staffUsuario', data.usuario);
+    localStorage.setItem('staffRol', data.rol);
+    window.location.href = 'planilla-labores.html';
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+    btn.disabled = false;
+  }
+}
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+</script>
+</body>
+</html>

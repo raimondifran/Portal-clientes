@@ -142,11 +142,17 @@
 </head>
 <body>
 
-<header>
-  <div class="logo">🌱</div>
-  <div>
-    <h1>Planilla de Labores</h1>
-    <p>Carga unificada — todos los clientes y campos</p>
+<header style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="logo">🌱</div>
+    <div>
+      <h1>Planilla de Labores</h1>
+      <p>Carga unificada — todos los clientes y campos</p>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px; font-size:0.85rem;">
+    <span>👤 Conectado como <strong id="staffUsuarioLabel"></strong></span>
+    <button onclick="cerrarSesionStaff()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.4); color:white; border-radius:6px; padding:6px 12px; font-size:0.8rem; cursor:pointer;">Cerrar sesión</button>
   </div>
 </header>
 
@@ -197,12 +203,6 @@
         <input type="text" id="observaciones" placeholder="Notas adicionales">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group" style="max-width:260px;">
-        <label>👤 Quién carga esta labor</label>
-        <input type="text" id="cargadoPor" placeholder="Tu nombre">
-      </div>
-    </div>
   </div>
 
   <div class="card">
@@ -226,6 +226,24 @@
 <script>
 // ⚠️ Misma URL que en las demás apps del sistema
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
+
+// ── AUTENTICACIÓN DE OPERADOR ─────────────────────────────────
+const staffToken = localStorage.getItem('staffToken');
+const staffUsuario = localStorage.getItem('staffUsuario');
+const staffRol = localStorage.getItem('staffRol');
+if (!staffToken || !staffUsuario || staffRol !== 'operador') {
+  window.location.href = 'staff-login.html';
+}
+function cerrarSesionStaff() {
+  localStorage.removeItem('staffToken');
+  localStorage.removeItem('staffUsuario');
+  localStorage.removeItem('staffRol');
+  window.location.href = 'staff-login.html';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const lbl = document.getElementById('staffUsuarioLabel');
+  if (lbl) lbl.textContent = staffUsuario || '';
+});
 
 const UNIDADES_PRODUCTO = ['L/ha','kg/ha','cc/ha','g/ha'];
 
@@ -1061,16 +1079,22 @@ async function confirmar() {
     const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
     doc.save(nombreArchivo);
 
-    // Guardar labor
-    const cargadoPor = document.getElementById('cargadoPor').value.trim();
+    // Guardar labor (autenticado — "cargado por" lo determina el backend por sesión)
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
       planilla: cliente + ' - ' + campoLabel,
       cliente, campo: campoLabel,
-      lotes: lotesPayload,
-      cargadoPor
+      lotes: lotesPayload
     });
-    guardarSilencioso(SHEETS_URL + '?payload=' + encodeURIComponent(payload));
+    const guardarUrl = SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
+    const resGuardar = await jsonp(guardarUrl);
+    if (!resGuardar.ok) {
+      if (/sesión|iniciar sesión/i.test(resGuardar.error || '')) {
+        cerrarSesionStaff();
+        return;
+      }
+      throw new Error(resGuardar.error || 'No se pudo guardar la labor');
+    }
 
     // Si es Siembra, actualizar el cultivo de cada lote en el Maestro (rotación),
     // respetando el campo específico de cada uno.
@@ -1098,13 +1122,6 @@ async function confirmar() {
 }
 
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-
-// Recordar quién carga (para no tener que escribirlo cada vez)
-const inputCargadoPor = document.getElementById('cargadoPor');
-inputCargadoPor.value = localStorage.getItem('labores_cargadoPor') || '';
-inputCargadoPor.addEventListener('input', () => {
-  localStorage.setItem('labores_cargadoPor', inputCargadoPor.value);
-});
 
 cargarMaestro();
 </script>
