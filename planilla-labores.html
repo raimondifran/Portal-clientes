@@ -253,6 +253,7 @@ let filaCounter = 0;
 let jsonpCounter = 0;
 let envaseSize = {};      // { key: number } tamaño de envase por producto
 let acceptedTotals = {};  // { key: number } total ya aceptado (redondeado)
+let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira cada producto
 
 function jsonpScript(url) {
   return new Promise((resolve, reject) => {
@@ -298,11 +299,11 @@ function escapeHtml(str) {
 // Genera el logo AgroRaimondi como imagen PNG (para insertar en el PDF).
 function getLogoDataUrl() {
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="360" height="120" viewBox="0 0 360 120">
-      <rect x="0" y="0" width="360" height="120" rx="16" fill="white"/>
-      <text x="180" y="36" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" fill="#C9A200" text-anchor="middle" letter-spacing="5">AGRO</text>
-      <text x="160" y="68" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="600" fill="#367C2B" text-anchor="end" letter-spacing="1">RAIMONDI</text>
-      <g transform="translate(170,44) scale(1.35)" fill="none" stroke="#367C2B" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="300" height="130" viewBox="0 0 300 130">
+      <rect x="0" y="0" width="300" height="130" rx="14" fill="white"/>
+      <text x="20" y="34" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="600" fill="#C9A200" letter-spacing="5">AGRO</text>
+      <text x="20" y="75" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="600" fill="#367C2B" letter-spacing="1">RAIMONDI</text>
+      <g transform="translate(205,49)" fill="none" stroke="#367C2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="25" x2="12" y2="5"/>
         <path d="M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7"/>
         <path d="M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7"/>
@@ -311,8 +312,8 @@ function getLogoDataUrl() {
         <path d="M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19"/>
         <path d="M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19"/>
       </g>
-      <line x1="80" y1="88" x2="280" y2="88" stroke="rgba(54,124,43,0.3)" stroke-width="1"/>
-      <text x="180" y="103" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#4A8C3A" text-anchor="middle" letter-spacing="2">ASESORAMIENTO AGROPECUARIO</text>
+      <line x1="20" y1="90" x2="255" y2="90" stroke="rgba(54,124,43,0.3)" stroke-width="1"/>
+      <text x="20" y="107" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#4A8C3A" letter-spacing="1.8">ASESORAMIENTO AGROPECUARIO</text>
     </svg>
   `;
   return new Promise((resolve, reject) => {
@@ -320,11 +321,11 @@ function getLogoDataUrl() {
     img.onload = () => {
       const scale = 3;
       const canvas = document.createElement('canvas');
-      canvas.width = 360 * scale;
-      canvas.height = 120 * scale;
+      canvas.width = 300 * scale;
+      canvas.height = 130 * scale;
       const ctx = canvas.getContext('2d');
       ctx.scale(scale, scale);
-      ctx.drawImage(img, 0, 0, 360, 120);
+      ctx.drawImage(img, 0, 0, 300, 130);
       resolve(canvas.toDataURL('image/png'));
     };
     img.onerror = reject;
@@ -366,6 +367,7 @@ function onClienteChange() {
   filas = [];
   envaseSize = {};
   acceptedTotals = {};
+  retiros = {};
   renderLotes();
   renderResumenProductos();
 }
@@ -383,6 +385,7 @@ function onTipoChange() {
   filas = [];
   envaseSize = {};
   acceptedTotals = {};
+  retiros = {};
   renderLotes();
   renderResumenProductos();
 }
@@ -647,6 +650,7 @@ function renderResumenProductos() {
     const ajustado = acceptedTotals[k] !== undefined;
     const displayTotal = ajustado ? acceptedTotals[k] : prod.total;
     const factor = calcularFactor(k, mapa);
+    if (!retiros[k]) retiros[k] = [{ deposito: '', cantidad: Math.round(displayTotal * 100) / 100 }];
 
     const filasHtml = prod.lotes.map(l => `
       <tr>
@@ -672,7 +676,7 @@ function renderResumenProductos() {
             <tr class="total-row"><td colspan="2">TOTAL</td><td class="num">${prod.lotes.reduce((s,l)=>s+parseFloat(l.ha||0),0)}</td><td>—</td>${ajustado ? '<td>—</td>' : ''}<td class="num">${displayTotal.toFixed(2)} ${unidS}</td></tr>
           </tbody>
         </table>
-        <div class="envase-box">
+        <div class="envase-box" style="margin-bottom:10px;">
           <div class="envase-top-row">
             <span class="envase-label">Tamaño del bidón/envase</span>
             <input type="number" class="envase-input" id="env-${k}" value="${envase}" min="0.1" step="0.5"
@@ -681,14 +685,28 @@ function renderResumenProductos() {
             <span class="total-actual-chip">${ajustado ? 'Total ajustado' : 'Total sin ajustar'}: ${displayTotal.toFixed(2)} ${unidS}</span>
             ${ajustado ? `<button type="button" class="btn-opcion" style="width:auto;background:#5d6d7e" onclick="deshacerAjuste('${k}')">↩️ Deshacer ajuste</button>` : ''}
           </div>
-          <div id="envres-${k}">${buildEnvaseChips(k, prod.total, envase, prod.unidad)}</div>
+          <div id="envres-${k}">${buildEnvaseChips(k, prod.total, envase, prod.unidad, prod.lotes)}</div>
+        </div>
+        <div class="envase-box" style="border:1.5px solid #f5b041;background:#fef9e7;">
+          <div class="envase-label" style="margin-bottom:8px;font-size:0.88rem;color:#9a6005;">📦 ¿De dónde se retira? (Depósito / Agronomía — puede ser más de uno)</div>
+          ${(retiros[k] || []).map((r, idx) => `
+            <div class="prod-row">
+              <input placeholder="Depósito / Agronomía" value="${escapeHtml(r.deposito)}" style="flex:2"
+                oninput="actualizarRetiro('${k}',${idx},'deposito',this.value)">
+              <input type="number" step="0.01" placeholder="Cantidad" value="${escapeHtml(r.cantidad)}" style="flex:1"
+                oninput="actualizarRetiro('${k}',${idx},'cantidad',this.value)">
+              <span style="font-size:0.82rem;color:#5d6d7e;">${unidS}</span>
+              <button type="button" class="p-del" onclick="quitarRetiro('${k}',${idx})">✕</button>
+            </div>
+          `).join('')}
+          <button type="button" class="btn-add-prod" onclick="agregarRetiro('${k}')">➕ Agregar depósito</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-function buildEnvaseChips(k, total, envase, unidad) {
+function buildEnvaseChips(k, total, envase, unidad, lotes) {
   const unidS = unidad.split('/')[0];
   const effectiveTotal = acceptedTotals[k] !== undefined ? acceptedTotals[k] : Math.round(total * 100) / 100;
   const envasesUp = Math.ceil(effectiveTotal / envase);
@@ -696,6 +714,13 @@ function buildEnvaseChips(k, total, envase, unidad) {
   const totalUp = envasesUp * envase;
   const totalDown = envasesDown * envase;
   const isExact = Math.abs(totalUp - effectiveTotal) < 0.001;
+
+  function dosisPreviewHtml(nuevoTotal) {
+    if (!lotes || !lotes.length) return '';
+    const f = nuevoTotal / total;
+    const items = lotes.map(l => `${escapeHtml(l.loteId)}: ${(l.dosis * f).toFixed(3)}`).join(' · ');
+    return `<div style="font-size:0.72rem;color:#5d6d7e;margin-bottom:6px;line-height:1.4;">Dosis nueva por lote: ${items}</div>`;
+  }
 
   if (isExact) {
     return `<div class="opciones-row">
@@ -719,6 +744,7 @@ function buildEnvaseChips(k, total, envase, unidad) {
         <div class="opcion-header">▼ Redondear para abajo</div>
         <div class="opcion-num">${envasesDown} envase${envasesDown !== 1 ? 's' : ''} × ${envase} ${unidS} = ${totalDown.toFixed(2)} ${unidS}</div>
         <div class="opcion-pct pct-down">${pctDown}% (${diffDown} ${unidS})</div>
+        ${dosisPreviewHtml(totalDown)}
         <button class="btn-opcion" onclick="aceptarAjuste('${k}', ${totalDown})">✓ Aceptar ▼</button>
       </div>`;
   }
@@ -728,6 +754,7 @@ function buildEnvaseChips(k, total, envase, unidad) {
       <div class="opcion-header">▲ Redondear para arriba</div>
       <div class="opcion-num">${envasesUp} envase${envasesUp !== 1 ? 's' : ''} × ${envase} ${unidS} = ${totalUp.toFixed(2)} ${unidS}</div>
       <div class="opcion-pct pct-up">+${pctUp}% (+${diffUp} ${unidS})</div>
+      ${dosisPreviewHtml(totalUp)}
       <button class="btn-opcion" onclick="aceptarAjuste('${k}', ${totalUp})">✓ Aceptar ▲</button>
     </div>
     ${downHTML}
@@ -744,7 +771,7 @@ function recalcEnvase(k) {
   const prod = mapa[k];
   if (!prod) return;
   const el = document.getElementById('envres-' + k);
-  if (el) el.innerHTML = buildEnvaseChips(k, prod.total, envase, prod.unidad);
+  if (el) el.innerHTML = buildEnvaseChips(k, prod.total, envase, prod.unidad, prod.lotes);
 }
 
 // El ajuste por bidón NO modifica la dosis cargada en cada lote —
@@ -762,6 +789,29 @@ function aceptarAjuste(k, newTotal) {
 function deshacerAjuste(k) {
   delete acceptedTotals[k];
   renderResumenProductos();
+}
+
+// ── RETIRO / DEPÓSITO (de dónde se retira cada producto) ──────
+function agregarRetiro(k) {
+  if (!retiros[k]) retiros[k] = [];
+  const mapa = calcularMapaProductos();
+  const prod = mapa[k];
+  const total = prod ? (acceptedTotals[k] !== undefined ? acceptedTotals[k] : prod.total) : 0;
+  const usado = retiros[k].reduce((s, r) => s + (parseFloat(r.cantidad) || 0), 0);
+  const restante = Math.max(0, Math.round((total - usado) * 100) / 100);
+  retiros[k].push({ deposito: '', cantidad: restante > 0 ? restante : '' });
+  renderResumenProductos();
+}
+
+function quitarRetiro(k, idx) {
+  if (!retiros[k]) return;
+  retiros[k].splice(idx, 1);
+  renderResumenProductos();
+}
+
+function actualizarRetiro(k, idx, campo, value) {
+  if (!retiros[k] || !retiros[k][idx]) return;
+  retiros[k][idx][campo] = value;
 }
 
 function calcularFactor(k, mapa) {
@@ -836,9 +886,9 @@ async function confirmar() {
 
     function drawPageHeader() {
       doc.setFillColor(...VERDE);
-      doc.rect(0, 0, pageW, 26, 'F');
+      doc.rect(0, 0, pageW, 34, 'F');
       if (logoDataUrl) {
-        doc.addImage(logoDataUrl, 'PNG', pageW - marginL - 32, 3, 32, 10.7);
+        doc.addImage(logoDataUrl, 'PNG', pageW - marginL - 46, 3, 46, 19.9);
       }
       doc.setTextColor(...BLANCO);
       doc.setFont('helvetica', 'bold');
@@ -859,56 +909,51 @@ async function confirmar() {
       doc.setTextColor(0, 0, 0);
     }
 
-    let y = 32;
+    let y = 40;
     drawPageHeader();
 
     if (conf.modo === 'productos') {
-      // ── SECCIÓN: APLICACION POR PRODUCTO
+      // ── SECCIÓN: APLICACION POR LOTE
       doc.setFillColor(...GRIS);
       doc.rect(marginL, y, cW, 8, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
-      doc.text('APLICACION POR PRODUCTO', marginL + 3, y + 5.5);
+      doc.text('APLICACION POR LOTE', marginL + 3, y + 5.5);
       doc.setTextColor(0, 0, 0);
       y += 11;
 
-      const clavesProd = Object.keys(mapaOriginal);
-      clavesProd.forEach(k => {
-        const prod = mapaOriginal[k];
-        const factor = calcularFactor(k, mapaOriginal);
-        const unidS = prod.unidad.split('/')[0];
+      filas.forEach(f => {
+        const prods = (f.productos || []).filter(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0);
+        if (!prods.length) return;
 
-        if (y > 250) { doc.addPage(); drawPageHeader(); y = 32; }
+        if (y > 250) { doc.addPage(); drawPageHeader(); y = 40; }
 
         doc.setFillColor(...VERDE);
         doc.roundedRect(marginL, y, cW, 8, 1.5, 1.5, 'F');
         doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...BLANCO);
-        doc.text(prod.nombre, marginL + 3, y + 5.5);
+        doc.text(`${f.lote} (${f.campo})`, marginL + 3, y + 5.5);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-        doc.text(`unidad: ${prod.unidad}`, marginL + 75, y + 5.5);
+        doc.text(`${f.ha} ha   |   ${f.cultivoActual}`, marginL + 75, y + 5.5);
         doc.setTextColor(0, 0, 0);
         y += 10;
 
-        const rows = prod.lotes.map(l => [
-          `${l.loteId} (${l.campo})`, l.cultivo, l.ha, (l.dosis * factor).toFixed(3), (l.subtotal * factor).toFixed(2) + ' ' + unidS
-        ]);
-        const totalHa = prod.lotes.reduce((s, l) => s + parseFloat(l.ha || 0), 0);
-        const totalFinal = acceptedTotals[k] !== undefined ? acceptedTotals[k] : prod.total;
-        rows.push(['TOTAL', '—', totalHa, '—', totalFinal.toFixed(2) + ' ' + unidS]);
+        const rows = prods.map(p => {
+          const k = eKey(p.nombre, p.unidad);
+          const factor = calcularFactor(k, mapaOriginal);
+          const dosisAj = parseFloat(p.dosis) * factor;
+          const unidS = p.unidad.split('/')[0];
+          return [p.nombre, dosisAj.toFixed(3), p.unidad, (dosisAj * parseFloat(f.ha || 0)).toFixed(2) + ' ' + unidS];
+        });
 
         doc.autoTable({
-          head: [['Lote (Campo)', 'Cultivo', 'Ha', 'Dosis/ha', 'Total']],
+          head: [['Producto', 'Dosis / ha', 'Unidad', 'Total']],
           body: rows,
           startY: y,
           margin: { left: marginL, right: marginL },
           styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 } },
           headStyles: { fillColor: VERDE_CLARO, textColor: VERDE, fontStyle: 'bold', fontSize: 8.5 },
-          columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } },
-          willDrawCell(data) {
-            if (data.section === 'body' && data.row.index === rows.length - 1) {
-              data.cell.styles.fillColor = VERDE;
-              data.cell.styles.textColor = BLANCO;
-              data.cell.styles.fontStyle = 'bold';
-            }
+          columnStyles: {
+            0: { cellWidth: 'auto' }, 1: { cellWidth: 28, halign: 'right' },
+            2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
           },
           alternateRowStyles: { fillColor: [248, 251, 248] },
           theme: 'plain',
@@ -918,15 +963,16 @@ async function confirmar() {
         y = doc.lastAutoTable.finalY + 7;
       });
 
-      // ── SECCIÓN: TOTAL DE PRODUCTOS A COMPRAR / STOCK
-      if (y > 220) { doc.addPage(); drawPageHeader(); y = 32; }
+      // ── SECCIÓN: RESUMEN DE PRODUCTOS TOTALES (a comprar / stock)
+      if (y > 220) { doc.addPage(); drawPageHeader(); y = 40; }
       doc.setFillColor(...GRIS);
       doc.rect(marginL, y, cW, 8, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
-      doc.text('TOTAL DE PRODUCTOS A COMPRAR / STOCK', marginL + 3, y + 5.5);
+      doc.text('RESUMEN DE PRODUCTOS TOTALES', marginL + 3, y + 5.5);
       doc.setTextColor(0, 0, 0);
       y += 11;
 
+      const clavesProd = Object.keys(mapaOriginal);
       const stockRows = clavesProd.map(k => {
         const prod = mapaOriginal[k];
         const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
@@ -935,24 +981,30 @@ async function confirmar() {
         const totalAj = envases * envase;
         const unidS = prod.unidad.split('/')[0];
         const sobrante = totalAj - totalForCalc;
+        const retirosTxt = (retiros[k] || [])
+          .filter(r => r.deposito || r.cantidad)
+          .map(r => `${r.cantidad || '?'} ${unidS} - ${r.deposito || '(sin nombre)'}`)
+          .join('\n') || '—';
         return [
-          prod.nombre, prod.unidad, prod.total.toFixed(2) + ' ' + unidS,
+          prod.nombre, prod.unidad, totalForCalc.toFixed(2) + ' ' + unidS,
           `${envase} ${unidS}`, `${envases} envase${envases !== 1 ? 's' : ''}`,
           totalAj.toFixed(2) + ' ' + unidS,
-          sobrante < 0.005 ? 'Exacto' : '+' + sobrante.toFixed(2) + ' ' + unidS
+          sobrante < 0.005 ? 'Exacto' : '+' + sobrante.toFixed(2) + ' ' + unidS,
+          retirosTxt
         ];
       });
 
       doc.autoTable({
-        head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a comprar', 'Sobrante']],
+        head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a comprar', 'Sobrante', 'Retira de']],
         body: stockRows,
         startY: y,
         margin: { left: marginL, right: marginL },
-        styles: { fontSize: 9, cellPadding: { top: 3, bottom: 3, left: 3, right: 3 } },
-        headStyles: { fillColor: VERDE, textColor: BLANCO, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 3, right: 3 } },
+        headStyles: { fillColor: VERDE, textColor: BLANCO, fontStyle: 'bold', fontSize: 8 },
         columnStyles: {
           0: { fontStyle: 'bold' }, 2: { halign: 'right' }, 3: { halign: 'center' },
-          4: { halign: 'center', fontStyle: 'bold' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' }
+          4: { halign: 'center', fontStyle: 'bold' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' },
+          7: { fontSize: 7.5 }
         },
         willDrawCell(data) {
           if (data.section !== 'body') return;
@@ -1026,6 +1078,7 @@ async function confirmar() {
     filas = [];
     envaseSize = {};
     acceptedTotals = {};
+    retiros = {};
     renderLotes();
     renderResumenProductos();
   } catch (err) {
