@@ -197,6 +197,12 @@
         <input type="text" id="observaciones" placeholder="Notas adicionales">
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group" style="max-width:260px;">
+        <label>👤 Quién carga esta labor</label>
+        <input type="text" id="cargadoPor" placeholder="Tu nombre">
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -1056,11 +1062,13 @@ async function confirmar() {
     doc.save(nombreArchivo);
 
     // Guardar labor
+    const cargadoPor = document.getElementById('cargadoPor').value.trim();
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
       planilla: cliente + ' - ' + campoLabel,
       cliente, campo: campoLabel,
-      lotes: lotesPayload
+      lotes: lotesPayload,
+      cargadoPor
     });
     guardarSilencioso(SHEETS_URL + '?payload=' + encodeURIComponent(payload));
 
@@ -1090,6 +1098,14 @@ async function confirmar() {
 }
 
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+
+// Recordar quién carga (para no tener que escribirlo cada vez)
+const inputCargadoPor = document.getElementById('cargadoPor');
+inputCargadoPor.value = localStorage.getItem('labores_cargadoPor') || '';
+inputCargadoPor.addEventListener('input', () => {
+  localStorage.setItem('labores_cargadoPor', inputCargadoPor.value);
+});
+
 cargarMaestro();
 </script>
 </body>
