@@ -153,11 +153,23 @@
   </div>
 
   <div class="cards" style="margin-top:16px">
-    <a class="card secondary" href="#" onclick="descargarIcono(); return false;">
+    <a class="card secondary" href="#" onclick="mostrarInstalacion(); return false;">
       <div class="card-icon">📲</div>
       <h2>Instalar en celular</h2>
-      <p>Descargá el ícono para tu pantalla de inicio</p>
+      <p>Agregá un acceso directo a tu pantalla de inicio</p>
     </a>
+  </div>
+
+  <!-- Modal instalación -->
+  <div id="modal-install" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:16px; padding:28px 24px; max-width:340px; width:100%; text-align:center; position:relative;">
+      <button onclick="document.getElementById('modal-install').style.display='none'" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:#999;cursor:pointer;">✕</button>
+      <div style="font-size:36px; margin-bottom:12px;">📲</div>
+      <h3 style="color:#1e2b1a; margin-bottom:8px;">Agregar a pantalla de inicio</h3>
+      <canvas id="iconCanvas" width="512" height="512" style="display:none;"></canvas>
+      <img id="iconPreview" style="width:100px;height:100px;border-radius:22px;margin:12px auto;display:block;box-shadow:0 4px 16px rgba(0,0,0,0.15);" alt="Ícono AgroRaimondi"/>
+      <div id="install-steps" style="text-align:left; font-size:0.85rem; color:#374151; line-height:1.7; margin-top:14px;"></div>
+    </div>
   </div>
 
   <footer>AgroRaimondi &copy; 2026 — Asesoramiento Agropecuario</footer>
@@ -165,6 +177,56 @@
   <canvas id="iconCanvas" width="512" height="512"></canvas>
 
 <script>
+function generarIcono() {
+  const canvas = document.getElementById('iconCanvas');
+  const ctx = canvas.getContext('2d');
+  const S = 512;
+  ctx.fillStyle = '#367C2B';
+  ctx.beginPath(); ctx.roundRect(0,0,S,S,90); ctx.fill();
+  ctx.globalAlpha = 0.07; ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(S*.75,S*.25,200,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#C9A200'; ctx.font = '600 56px system-ui,Arial,sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('AGRO', S/2, 172);
+  ctx.fillStyle = '#fff'; ctx.font = '500 88px system-ui,Arial,sans-serif';
+  ctx.fillText('RAIMONDI', S/2, 276);
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(72,300); ctx.lineTo(440,300); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.60)'; ctx.font = '26px system-ui,Arial,sans-serif';
+  ctx.fillText('ASESORAMIENTO AGROPECUARIO', S/2, 346);
+  return canvas.toDataURL('image/png');
+}
+
+function mostrarInstalacion() {
+  const dataUrl = generarIcono();
+  document.getElementById('iconPreview').src = dataUrl;
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+
+  let steps = '';
+  if (isIOS) {
+    steps = `<p style="margin-bottom:8px"><strong>En iPhone/iPad:</strong></p>
+      <p>1. Mantené presionada la imagen de arriba y tocá <strong>"Guardar imagen"</strong></p>
+      <p>2. Abrí <strong>Safari</strong> y entrá a esta página</p>
+      <p>3. Tocá el botón <strong>compartir</strong> (□↑) en la barra de abajo</p>
+      <p>4. Tocá <strong>"Agregar a pantalla de inicio"</strong></p>`;
+  } else if (isAndroid) {
+    steps = `<p style="margin-bottom:8px"><strong>En Android:</strong></p>
+      <p>1. Abrí Chrome y entrá a esta página</p>
+      <p>2. Tocá el menú <strong>⋮</strong> arriba a la derecha</p>
+      <p>3. Tocá <strong>"Agregar a pantalla de inicio"</strong></p>`;
+  } else {
+    // Desktop: descarga normal
+    const a = document.createElement('a');
+    a.download = 'agroraimondi-icono.png';
+    a.href = dataUrl; a.click(); return;
+  }
+
+  document.getElementById('install-steps').innerHTML = steps;
+  document.getElementById('modal-install').style.display = 'flex';
+}
+
 function descargarIcono() {
   const canvas = document.getElementById('iconCanvas');
   const ctx = canvas.getContext('2d');
