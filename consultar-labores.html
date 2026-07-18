@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consultar Labores</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, #1a5276, #2e86c1);
+    color: white; padding: 18px 30px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header .logo { font-size: 2rem; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+  .container { max-width: 900px; margin: 28px auto; padding: 0 18px; }
+  .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .toolbar label { font-size: 0.85rem; font-weight: 600; color: #5d6d7e; }
+  .toolbar input {
+    width: 70px; padding: 8px 10px; border: 1.5px solid #d5d8dc; border-radius: 8px; font-size: 0.9rem;
+  }
+  .btn {
+    background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
+    border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem;
+    font-weight: 700; cursor: pointer; transition: transform 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 20px 24px; margin-bottom: 18px;
+  }
+  .labor-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 12px; margin-bottom: 12px; border-bottom: 2px solid #d6eaf8; flex-wrap: wrap; gap: 8px;
+  }
+  .labor-title { font-size: 1.05rem; font-weight: 700; color: #1a5276; }
+  .labor-meta { font-size: 0.82rem; color: #5d6d7e; }
+  .badge {
+    background: #d6eaf8; color: #1a5276; border-radius: 20px; padding: 4px 12px;
+    font-size: 0.78rem; font-weight: 700;
+  }
+  .lote-block { margin-bottom: 12px; }
+  .lote-name { font-weight: 700; font-size: 0.9rem; color: #1a202c; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 6px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eef1f4; }
+  th { color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: 0.72rem; }
+  .obs { font-size: 0.82rem; color: #5d6d7e; margin-top: 8px; font-style: italic; }
+  .empty, .loading, .error {
+    text-align: center; padding: 40px 20px; color: #5d6d7e; font-size: 0.95rem;
+  }
+  .error { color: #c0392b; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📋</div>
+  <div>
+    <h1>Consultar Labores</h1>
+    <p>Historial de labores cargadas</p>
+  </div>
+</header>
+
+<div class="container">
+  <div class="toolbar">
+    <label for="cantidad">Mostrar últimas</label>
+    <input type="number" id="cantidad" value="3" min="1" max="50">
+    <button class="btn" id="btnConsultar" onclick="consultar()">🔄 Consultar</button>
+  </div>
+
+  <div id="resultado">
+    <div class="loading">Cargando…</div>
+  </div>
+</div>
+
+<script>
+// ⚠️ Reemplazar por la misma URL que se usa en las planillas (SHEETS_URL)
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
+
+let jsonpCounter = 0;
+
+function jsonpScript(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + (jsonpCounter++);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Tiempo de espera agotado'));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('No se pudo conectar (script)'));
+    };
+
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + callbackName;
+    document.body.appendChild(script);
+  });
+}
+
+async function jsonpFetch(url) {
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function jsonp(url) {
+  try {
+    return await jsonpFetch(url);
+  } catch (errFetch) {
+    try {
+      return await jsonpScript(url);
+    } catch (errScript) {
+      throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
+    }
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function formatFecha(f) {
+  if (!f) return '';
+  return f;
+}
+
+function renderLabores(labores) {
+  const el = document.getElementById('resultado');
+  if (!labores || !labores.length) {
+    el.innerHTML = '<div class="empty">No hay labores cargadas todavía.</div>';
+    return;
+  }
+
+  el.innerHTML = labores.map(labor => {
+    const lotesHtml = (labor.lotes || []).map(l => {
+      const prodRows = (l.productos || []).map(p => `
+        <tr>
+          <td>${escapeHtml(p.nombre)}</td>
+          <td>${escapeHtml(p.dosis)}</td>
+          <td>${escapeHtml(p.unidad)}</td>
+        </tr>
+      `).join('');
+      return `
+        <div class="lote-block">
+          <div class="lote-name">${escapeHtml(l.lote)} — ${escapeHtml(l.cultivo)} (${escapeHtml(l.ha)} ha)</div>
+          ${prodRows ? `<table>
+            <thead><tr><th>Producto</th><th>Dosis</th><th>Unidad</th></tr></thead>
+            <tbody>${prodRows}</tbody>
+          </table>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="card">
+        <div class="labor-header">
+          <div>
+            <div class="labor-title">${escapeHtml(labor.planilla) || 'Labor'}</div>
+            <div class="labor-meta">${formatFecha(labor.fecha)} · ${escapeHtml(labor.tipo)} · Operador: ${escapeHtml(labor.operador)}</div>
+          </div>
+          <div class="badge">${(labor.lotes || []).length} lote(s)</div>
+        </div>
+        ${lotesHtml}
+        ${labor.observaciones ? `<div class="obs">Observaciones: ${escapeHtml(labor.observaciones)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function consultar() {
+  const btn = document.getElementById('btnConsultar');
+  const el = document.getElementById('resultado');
+  const n = document.getElementById('cantidad').value || 3;
+
+  btn.disabled = true;
+  el.innerHTML = '<div class="loading">Cargando…</div>';
+
+  try {
+    const url = SHEETS_URL + '?action=ultimas&n=' + encodeURIComponent(n);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    renderLabores(data.labores);
+  } catch (err) {
+    el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+consultar();
+</script>
+</body>
+</html>
