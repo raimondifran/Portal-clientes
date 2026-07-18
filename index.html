@@ -182,7 +182,13 @@ function generarIcono() {
   const ctx = canvas.getContext('2d');
   const S = 512;
   ctx.fillStyle = '#367C2B';
-  ctx.beginPath(); ctx.roundRect(0,0,S,S,90); ctx.fill();
+  const r = 90;
+  ctx.beginPath();
+  ctx.moveTo(r, 0); ctx.lineTo(S-r, 0); ctx.arcTo(S,0,S,r,r);
+  ctx.lineTo(S, S-r); ctx.arcTo(S,S,S-r,S,r);
+  ctx.lineTo(r, S); ctx.arcTo(0,S,0,S-r,r);
+  ctx.lineTo(0, r); ctx.arcTo(0,0,r,0,r);
+  ctx.closePath(); ctx.fill();
   ctx.globalAlpha = 0.07; ctx.fillStyle = '#fff';
   ctx.beginPath(); ctx.arc(S*.75,S*.25,200,0,Math.PI*2); ctx.fill();
   ctx.globalAlpha = 1;
