@@ -193,17 +193,20 @@ function manejarError(err) {
   return false;
 }
 
-async function cargarFiltros() {
+function cargarFiltros() {
   document.getElementById('tituloCliente').textContent = clienteGuardado || 'Portal de Cliente';
-  try {
-    const data = await jsonp(SHEETS_URL + '?action=portalMaestro&token=' + encodeURIComponent(token));
-    if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    const sel = document.getElementById('fCampo');
-    sel.innerHTML = '<option value="">Todos</option>' +
-      data.campos.map(c => `<option value="${escapeHtml(c.campo)}">${escapeHtml(c.campo)}</option>`).join('');
-  } catch (err) {
-    if (manejarError(err)) return;
-  }
+}
+
+// Pobla el selector de campos desde los datos de labores ya cargados
+function actualizarSelectCampos(labores) {
+  const sel = document.getElementById('fCampo');
+  const campoActual = sel.value;
+  // Extraer campos únicos desde los lotes individuales (no el campo combinado "A + B")
+  const campos = [...new Set(
+    labores.flatMap(l => (l.lotes || []).map(lt => lt.campo).filter(Boolean))
+  )].sort();
+  sel.innerHTML = '<option value="">Todos</option>' +
+    campos.map(c => `<option value="${escapeHtml(c)}" ${c === campoActual ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
 }
 
 function renderLabores(labores) {
@@ -335,6 +338,8 @@ async function consultar() {
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     todasLasLabores = data.labores;
+    // Poblar selector de campos solo cuando mostramos todo (carga inicial)
+    if (!campo) actualizarSelectCampos(data.labores);
     actualizarSelectLotes(data.labores);
     filtrarYRenderizar();
   } catch (err) {
