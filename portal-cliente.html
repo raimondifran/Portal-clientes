@@ -113,7 +113,13 @@
   <div class="toolbar">
     <div class="field">
       <label>Campo</label>
-      <select id="fCampo" onchange="consultar()">
+      <select id="fCampo" onchange="onCampoChange()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Lote</label>
+      <select id="fLote" onchange="filtrarYRenderizar()">
         <option value="">Todos</option>
       </select>
     </div>
@@ -245,6 +251,36 @@ function renderLabores(labores) {
 }
 
 let ultimasLabores = [];
+let todasLasLabores = []; // copia completa sin filtro de lote
+
+function onCampoChange() {
+  // Al cambiar campo, resetear lote y recargar
+  document.getElementById('fLote').innerHTML = '<option value="">Todos</option>';
+  consultar();
+}
+
+function filtrarYRenderizar() {
+  const lote = document.getElementById('fLote').value;
+  if (!lote) {
+    renderLabores(todasLasLabores);
+    return;
+  }
+  const filtradas = todasLasLabores.map(labor => {
+    const lotesFiltrados = (labor.lotes || []).filter(l => l.lote === lote);
+    return lotesFiltrados.length ? { ...labor, lotes: lotesFiltrados } : null;
+  }).filter(Boolean);
+  renderLabores(filtradas);
+}
+
+function actualizarSelectLotes(labores) {
+  const lotesSel = document.getElementById('fLote');
+  const loteActual = lotesSel.value;
+  const lotes = [...new Set(
+    labores.flatMap(l => (l.lotes || []).map(lt => lt.lote)).filter(Boolean)
+  )].sort();
+  lotesSel.innerHTML = '<option value="">Todos</option>' +
+    lotes.map(lt => `<option value="${escapeHtml(lt)}" ${lt === loteActual ? 'selected' : ''}>${escapeHtml(lt)}</option>`).join('');
+}
 
 function csvEscape(v) {
   const s = v == null ? '' : String(v);
@@ -298,7 +334,9 @@ async function consultar() {
     if (campo) url += '&campo=' + encodeURIComponent(campo);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    renderLabores(data.labores);
+    todasLasLabores = data.labores;
+    actualizarSelectLotes(data.labores);
+    filtrarYRenderizar();
   } catch (err) {
     if (manejarError(err)) return;
     el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
