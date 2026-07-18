@@ -44,6 +44,7 @@
     width: 100%; padding: 10px 12px; border: 1.5px solid #d9e2d3; border-radius: 8px; font-size: 0.95rem;
   }
   .field input:focus { outline: none; border-color: #4a8c3a; }
+  .field .hint { font-size: 0.75rem; color: #8a9e84; margin-top: 4px; }
   .strength-bar  { height: 4px; background: #eee; border-radius: 4px; margin-top: 6px; overflow: hidden; }
   .strength-fill { height: 100%; border-radius: 4px; transition: width .3s, background .3s; width: 0%; }
   .strength-label { font-size: 0.75rem; margin-top: 4px; min-height: 16px; }
@@ -83,15 +84,16 @@
   </div>
 
   <h1>Cambiar contraseña</h1>
-  <p class="sub">Ingresá tu usuario y elegí una nueva contraseña</p>
+  <p class="sub">Necesitás un código de recuperación para continuar</p>
 
   <div class="field">
     <label>Usuario</label>
     <input type="text" id="usuario" autocomplete="username" placeholder="Tu usuario">
   </div>
   <div class="field">
-    <label>Contraseña actual</label>
-    <input type="password" id="pwdActual" placeholder="Contraseña actual">
+    <label>Código de recuperación</label>
+    <input type="text" id="codigoRecuperacion" placeholder="Pedíselo al administrador" autocomplete="off">
+    <div class="hint">Solicitá este código a AgroRaimondi</div>
   </div>
   <div class="field">
     <label>Nueva contraseña</label>
@@ -141,35 +143,34 @@ async function jsonp(url) {
 }
 
 async function resetear() {
-  const usuario   = document.getElementById('usuario').value.trim();
-  const actual    = document.getElementById('pwdActual').value;
-  const nueva     = document.getElementById('pwdNueva').value;
+  const usuario  = document.getElementById('usuario').value.trim();
+  const codigo   = document.getElementById('codigoRecuperacion').value.trim();
+  const nueva    = document.getElementById('pwdNueva').value;
   const confirmar = document.getElementById('pwdConfirm').value;
-  const msg       = document.getElementById('msg');
-  const btn       = document.getElementById('btnReset');
+  const msg      = document.getElementById('msg');
+  const btn      = document.getElementById('btnReset');
 
   msg.textContent = ''; msg.className = 'msg';
 
-  if (!usuario || !actual || !nueva || !confirmar) {
+  if (!usuario || !codigo || !nueva || !confirmar) {
     msg.textContent = '⚠️ Completá todos los campos.'; msg.className = 'msg err'; return;
   }
   if (nueva.length < 8) {
-    msg.textContent = '⚠️ La nueva contraseña debe tener al menos 8 caracteres.'; msg.className = 'msg err'; return;
+    msg.textContent = '⚠️ La contraseña debe tener al menos 8 caracteres.'; msg.className = 'msg err'; return;
   }
   if (nueva !== confirmar) {
-    msg.textContent = '⚠️ Las contraseñas nuevas no coinciden.'; msg.className = 'msg err'; return;
+    msg.textContent = '⚠️ Las contraseñas no coinciden.'; msg.className = 'msg err'; return;
   }
 
   btn.disabled = true;
   msg.textContent = 'Verificando...'; msg.className = 'msg';
 
   try {
-    const hashActual = await hashSHA256(actual);
-    const hashNueva  = await hashSHA256(nueva);
+    const hashNueva = await hashSHA256(nueva);
     const url = SHEETS_URL
       + '?action=cambiarPassword'
       + '&usuario=' + encodeURIComponent(usuario)
-      + '&hashActual=' + encodeURIComponent(hashActual)
+      + '&codigo=' + encodeURIComponent(codigo)
       + '&hashNueva=' + encodeURIComponent(hashNueva);
 
     const data = await jsonp(url);
