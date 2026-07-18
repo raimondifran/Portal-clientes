@@ -1076,10 +1076,8 @@ async function confirmar() {
       drawPageFooter(i, totalPages);
     }
 
-    const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
-    doc.save(nombreArchivo);
-
-    // Guardar labor (autenticado — "cargado por" lo determina el backend por sesión)
+    // ── 1. GUARDAR EN LA BASE DE DATOS PRIMERO (antes de abrir el PDF)
+    msg.textContent = 'Guardando en la base de datos…';
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
       planilla: cliente + ' - ' + campoLabel,
@@ -1096,8 +1094,7 @@ async function confirmar() {
       throw new Error(resGuardar.error || 'No se pudo guardar la labor');
     }
 
-    // Si es Siembra, actualizar el cultivo de cada lote en el Maestro (rotación),
-    // respetando el campo específico de cada uno.
+    // Si es Siembra, actualizar el cultivo de cada lote en el Maestro (rotación).
     if (tipo === 'Siembra') {
       lotesPayload.forEach(l => {
         const lotePayload = JSON.stringify({ cliente, campo: l.campo, lote: l.lote, cultivo: l.cultivo, ha: l.ha });
@@ -1105,7 +1102,11 @@ async function confirmar() {
       });
     }
 
-    msg.textContent = '✅ PDF guardado y labor cargada en la base de datos.';
+    // ── 2. GENERAR Y ABRIR EL PDF (después de guardar exitosamente)
+    const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
+    doc.save(nombreArchivo);
+
+    msg.textContent = '✅ Labor guardada en la base de datos. PDF generado.';
     msg.className = 'msg ok';
     filas = [];
     envaseSize = {};
