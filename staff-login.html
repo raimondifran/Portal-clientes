@@ -157,6 +157,8 @@ async function login() {
     localStorage.setItem('staffToken', data.token);
     localStorage.setItem('staffUsuario', data.usuario);
     localStorage.setItem('staffRol', data.rol);
+    // camposPermitidos: '' = todos los campos; "Cliente::Campo,..." = restringido
+    localStorage.setItem('staffCampos', data.camposPermitidos || '');
     window.location.href = 'planilla-labores.html';
   } catch (err) {
     msg.textContent = '⚠️ ' + err.message;

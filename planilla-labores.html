@@ -231,6 +231,8 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxtHC13vwUFmiqABSksj
 const staffToken = localStorage.getItem('staffToken');
 const staffUsuario = localStorage.getItem('staffUsuario');
 const staffRol = localStorage.getItem('staffRol');
+// staffCampos: '' = todos; "Cliente::Campo,..." = solo esos campos
+const staffCampos = localStorage.getItem('staffCampos') || '';
 if (!staffToken || !staffUsuario || staffRol !== 'operador') {
   window.location.href = 'staff-login.html';
 }
@@ -238,6 +240,7 @@ function cerrarSesionStaff() {
   localStorage.removeItem('staffToken');
   localStorage.removeItem('staffUsuario');
   localStorage.removeItem('staffRol');
+  localStorage.removeItem('staffCampos');
   window.location.href = 'staff-login.html';
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -375,6 +378,21 @@ async function cargarMaestro() {
     const data = await jsonp(SHEETS_URL + '?action=maestro');
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     maestro = data;
+
+    // Si el operador tiene campos restringidos, filtrar el maestro
+    if (staffCampos) {
+      const permitidos = new Set(staffCampos.split(',').map(s => s.trim()).filter(Boolean));
+      maestro = {
+        ...data,
+        clientes: data.clientes
+          .map(c => {
+            const camposFiltrados = c.campos.filter(cp => permitidos.has(c.cliente + '::' + cp.campo));
+            return camposFiltrados.length ? { ...c, campos: camposFiltrados } : null;
+          })
+          .filter(Boolean)
+      };
+    }
+
     const sel = document.getElementById('cliente');
     sel.innerHTML = '<option value="">Seleccionar…</option>' +
       maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
