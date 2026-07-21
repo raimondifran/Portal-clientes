@@ -87,14 +87,11 @@
     </div>
     <button class="btn" id="btnLogin" onclick="login()">Ingresar</button>
     <div class="msg" id="msg"></div>
-    <p style="text-align:center; margin-top:16px; font-size:0.82rem;">
-      <a href="resetear-contrasena.html" style="color:#367C2B; text-decoration:none;">¿Olvidaste tu contraseña?</a>
-    </p>
   </div>
 
 <script>
 // ⚠️ Misma URL que en las demás apps del sistema
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxtHC13vwUFmiqABSksjCJPZDe8lGrXQwgAJudpDfSiXe8TEE0qdqR3J_Z0ihP6UuZN9g/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
 
 let jsonpCounter = 0;
 function jsonpScript(url) {
@@ -157,8 +154,7 @@ async function login() {
     localStorage.setItem('staffToken', data.token);
     localStorage.setItem('staffUsuario', data.usuario);
     localStorage.setItem('staffRol', data.rol);
-    // camposPermitidos: '' = todos los campos; "Cliente::Campo,..." = restringido
-    localStorage.setItem('staffCampos', data.camposPermitidos || '');
+    localStorage.setItem('staffCamposPermitidos', JSON.stringify(data.camposPermitidos || []));
     window.location.href = 'planilla-labores.html';
   } catch (err) {
     msg.textContent = '⚠️ ' + err.message;

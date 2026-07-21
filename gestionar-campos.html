@@ -57,6 +57,7 @@
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-left: 14px; width: calc(100% - 14px); }
   th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef1f4; }
   th { color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
+  .edit-link { color: #2e86c1; cursor: pointer; font-size: 0.78rem; font-weight: 600; }
   .empty, .loading { text-align: center; padding: 30px; color: #5d6d7e; }
   .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
   .tab-btn {
@@ -66,16 +67,16 @@
   .tab-btn.active { background: #1a5276; color: white; border-color: #1a5276; }
   .panel { display: none; }
   .panel.active { display: block; }
-  /* Checkboxes de campos para operadores */
-  .campos-permisos-wrap {
-    border: 1.5px solid #d6eaf8; border-radius: 8px; padding: 10px 12px;
-    max-height: 220px; overflow-y: auto; background: #f8fafc;
+  .campos-check-list {
+    max-height: 220px; overflow-y: auto; border: 1.5px solid #d5d8dc;
+    border-radius: 8px; padding: 8px 10px; background: #fafcfe; margin-top: 4px;
   }
-  .campo-chk-grupo { margin-bottom: 10px; }
-  .campo-chk-grupo-title { font-size: 0.78rem; font-weight: 700; color: #1a5276; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .campo-chk-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 0.88rem; }
-  .campo-chk-item input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
-  .campo-chk-item label { cursor: pointer; }
+  .campos-check-grupo { margin-bottom: 10px; }
+  .campos-check-grupo-title { font-size: 0.75rem; font-weight: 700; color: #1a5276; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .campos-check-item { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 0.88rem; cursor: pointer; }
+  .campos-check-item input[type=checkbox] { accent-color: #1a5276; width: 15px; height: 15px; cursor: pointer; }
+  .campos-check-empty { color: #5d6d7e; font-size: 0.83rem; padding: 6px 0; }
+  .acceso-total-badge { font-size: 0.78rem; color: #27ae60; font-weight: 600; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -172,33 +173,27 @@
             <option value="operador">Operador de campo (carga labores)</option>
           </select>
         </div>
-
-        <!-- Solo para clientes -->
         <div class="field" id="us_clienteField">
           <label>Cliente</label>
           <select id="us_clienteSelect">
             <option value="">Seleccionar…</option>
           </select>
         </div>
-
-        <!-- Solo para operadores: qué campos puede ver -->
-        <div class="field" id="us_camposField" style="display:none;">
-          <label>Campos permitidos</label>
-          <div style="margin-bottom:6px;font-size:0.8rem;color:#5d6d7e;">
-            Sin ningún campo marcado = acceso a <strong>todos los campos</strong>.
-          </div>
-          <div class="campos-permisos-wrap" id="us_camposLista">
-            <div style="color:#5d6d7e;font-size:0.85rem;">Cargando…</div>
-          </div>
-        </div>
-
         <div class="field">
           <label>Usuario</label>
-          <input type="text" id="us_usuario" placeholder="Ej: operador1" autocomplete="off">
+          <input type="text" id="us_usuario" placeholder="Ej: lamas1" autocomplete="off">
         </div>
         <div class="field">
           <label>Contraseña</label>
           <input type="password" id="us_password" autocomplete="new-password">
+        </div>
+        <!-- PANEL CAMPOS PERMITIDOS (solo operadores) -->
+        <div class="field" id="us_camposField" style="display:none;">
+          <label>Campos con acceso</label>
+          <div class="campos-check-list" id="us_camposCheckList">
+            <div class="campos-check-empty">Cargando campos…</div>
+          </div>
+          <div class="acceso-total-badge" id="us_accesoTotalBadge">✅ Sin restricción: acceso a todos los campos</div>
         </div>
         <button class="btn" id="btnUsuario" onclick="crearUsuario()">🔑 Crear acceso</button>
         <div class="msg" id="msgUsuario"></div>
@@ -219,7 +214,7 @@
 
 <script>
 // ⚠️ Misma URL que en las planillas de fumigación
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxtHC13vwUFmiqABSksjCJPZDe8lGrXQwgAJudpDfSiXe8TEE0qdqR3J_Z0ihP6UuZN9g/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
 
 let maestro = { clientes: [] };
 let jsonpCounter = 0;
@@ -262,10 +257,12 @@ function escapeHtml(str) {
 }
 
 function cambiarTab(tab) {
-  ['agregar','editar','usuarios'].forEach(t => {
-    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
-    document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
-  });
+  document.getElementById('tabAgregar').classList.toggle('active', tab === 'agregar');
+  document.getElementById('tabEditar').classList.toggle('active', tab === 'editar');
+  document.getElementById('tabUsuarios').classList.toggle('active', tab === 'usuarios');
+  document.getElementById('panelAgregar').classList.toggle('active', tab === 'agregar');
+  document.getElementById('panelEditar').classList.toggle('active', tab === 'editar');
+  document.getElementById('panelUsuarios').classList.toggle('active', tab === 'usuarios');
 }
 
 async function hashSHA256(texto) {
@@ -280,47 +277,52 @@ function poblarSelectUsuarios() {
     maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
 }
 
-// Genera los checkboxes de campos para el panel de operadores.
-// Formato del value: "NombreCliente::NombreCampo"
-function renderCamposPermisos() {
-  const lista = document.getElementById('us_camposLista');
-  if (!maestro.clientes.length) {
-    lista.innerHTML = '<div style="color:#5d6d7e;font-size:0.85rem;">No hay campos cargados todavía.</div>';
-    return;
-  }
-  lista.innerHTML = maestro.clientes.map(c => {
-    if (!c.campos.length) return '';
-    const id_prefix = 'chk_' + c.cliente.replace(/[^a-zA-Z0-9]/g, '_');
-    return `
-      <div class="campo-chk-grupo">
-        <div class="campo-chk-grupo-title">👤 ${escapeHtml(c.cliente)}</div>
-        ${c.campos.map(cp => {
-          const chkId = id_prefix + '__' + cp.campo.replace(/[^a-zA-Z0-9]/g, '_');
-          const val = c.cliente + '::' + cp.campo;
-          return `
-            <div class="campo-chk-item">
-              <input type="checkbox" id="${chkId}" value="${escapeHtml(val)}">
-              <label for="${chkId}">🌾 ${escapeHtml(cp.campo)}</label>
-            </div>`;
-        }).join('')}
-      </div>`;
-  }).join('');
-}
-
-// Devuelve "Cliente::Campo,..." con los campos marcados, o "" si ninguno
-function getCamposPermitidos() {
-  const checks = document.querySelectorAll('#us_camposLista input[type=checkbox]:checked');
-  return Array.from(checks).map(c => c.value).join(',');
-}
-
 function onRolChange() {
   const rol = document.getElementById('us_rol').value;
   const esCliente = rol === 'cliente';
   document.getElementById('us_clienteField').style.display = esCliente ? 'block' : 'none';
   document.getElementById('us_camposField').style.display = esCliente ? 'none' : 'block';
+  if (!esCliente) renderCamposCheck();
   document.getElementById('us_ayuda').innerHTML = esCliente
     ? 'Compartile al cliente el link de <code>login.html</code> con este usuario y contraseña. Va a ver solo los datos de su cliente.'
-    : 'Compartile al operador el link de <code>staff-login.html</code>. Sin campos marcados = acceso a <strong>todos los clientes y campos</strong>.';
+    : 'Compartile al operador el link de <code>staff-login.html</code> con este usuario y contraseña. Sin campos seleccionados tendrá acceso a todos; si seleccionás campos, solo verá esos.';
+}
+
+function renderCamposCheck() {
+  const container = document.getElementById('us_camposCheckList');
+  const badge = document.getElementById('us_accesoTotalBadge');
+  if (!maestro.clientes || maestro.clientes.length === 0) {
+    container.innerHTML = '<div class="campos-check-empty">No hay campos cargados todavía.</div>';
+    badge.style.display = 'block';
+    return;
+  }
+  let html = '';
+  maestro.clientes.forEach(c => {
+    if (!c.campos || c.campos.length === 0) return;
+    html += `<div class="campos-check-grupo">
+      <div class="campos-check-grupo-title">${escapeHtml(c.cliente)}</div>`;
+    c.campos.forEach(cp => {
+      const key = encodeURIComponent(c.cliente) + '||' + encodeURIComponent(cp.campo);
+      html += `<label class="campos-check-item">
+        <input type="checkbox" class="us_campoCheck" data-cliente="${escapeHtml(c.cliente)}" data-campo="${escapeHtml(cp.campo)}" onchange="onCampoCheckChange()">
+        ${escapeHtml(cp.campo)}
+      </label>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html || '<div class="campos-check-empty">No hay campos cargados todavía.</div>';
+  onCampoCheckChange();
+}
+
+function onCampoCheckChange() {
+  const checks = document.querySelectorAll('.us_campoCheck:checked');
+  const badge = document.getElementById('us_accesoTotalBadge');
+  badge.style.display = checks.length === 0 ? 'block' : 'none';
+}
+
+function getCamposSeleccionados() {
+  const checks = document.querySelectorAll('.us_campoCheck:checked');
+  return Array.from(checks).map(ch => ({ cliente: ch.dataset.cliente, campo: ch.dataset.campo }));
 }
 
 async function crearUsuario() {
@@ -330,7 +332,6 @@ async function crearUsuario() {
   const cliente = document.getElementById('us_clienteSelect').value;
   const usuario = document.getElementById('us_usuario').value.trim();
   const password = document.getElementById('us_password').value;
-  const camposPermitidos = rol === 'operador' ? getCamposPermitidos() : '';
 
   if (!usuario || !password || (rol === 'cliente' && !cliente)) {
     msg.textContent = '⚠️ Completá los datos requeridos (usuario, contraseña' + (rol === 'cliente' ? ' y cliente' : '') + ').';
@@ -347,23 +348,20 @@ async function crearUsuario() {
   msg.textContent = '';
   try {
     const hash = await hashSHA256(password);
+    const camposPermitidos = rol === 'operador' ? getCamposSeleccionados() : [];
     const payload = JSON.stringify({ usuario, hash, cliente: rol === 'cliente' ? cliente : '', rol, camposPermitidos });
     const url = SHEETS_URL + '?action=crearUsuario&payload=' + encodeURIComponent(payload);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-
-    if (rol === 'cliente') {
-      msg.textContent = `✅ Acceso creado para "${usuario}" (cliente: ${cliente}).`;
-    } else if (camposPermitidos) {
-      const n = camposPermitidos.split(',').length;
-      msg.textContent = `✅ Operador "${usuario}" creado con acceso a ${n} campo${n !== 1 ? 's' : ''}.`;
-    } else {
-      msg.textContent = `✅ Operador "${usuario}" creado con acceso a todos los campos.`;
-    }
+    const camposMsg = (rol === 'operador' && camposPermitidos.length > 0)
+      ? ` · Campos: ${camposPermitidos.map(c => c.campo).join(', ')}`
+      : (rol === 'operador' ? ' · Acceso a todos los campos.' : '');
+    msg.textContent = rol === 'cliente'
+      ? `✅ Acceso creado para "${usuario}" (cliente: ${cliente}).`
+      : `✅ Operador "${usuario}" creado.${camposMsg}`;
     msg.className = 'msg ok';
     document.getElementById('us_usuario').value = '';
     document.getElementById('us_password').value = '';
-    document.querySelectorAll('#us_camposLista input[type=checkbox]').forEach(c => c.checked = false);
   } catch (err) {
     msg.textContent = '⚠️ ' + err.message;
     msg.className = 'msg err';
@@ -380,7 +378,6 @@ async function cargarMaestro() {
     poblarSelectsAgregar();
     poblarSelectsEditar();
     poblarSelectUsuarios();
-    renderCamposPermisos();
     renderArbol();
   } catch (err) {
     document.getElementById('arbol').innerHTML = '<div class="empty">⚠️ ' + escapeHtml(err.message) + '</div>';
@@ -396,26 +393,32 @@ function poblarSelectsAgregar() {
 
 function onClienteSelect() {
   const cliente = document.getElementById('ag_clienteSelect').value;
-  document.getElementById('ag_clienteNuevo').style.display = cliente ? 'none' : 'block';
+  const nuevoInput = document.getElementById('ag_clienteNuevo');
+  nuevoInput.style.display = cliente ? 'none' : 'block';
+
+  const campoSel = document.getElementById('ag_campoSelect');
   const c = maestro.clientes.find(x => x.cliente === cliente);
-  document.getElementById('ag_campoSelect').innerHTML = '<option value="">— Nuevo campo —</option>' +
+  campoSel.innerHTML = '<option value="">— Nuevo campo —</option>' +
     (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
   onCampoSelect();
 }
 
 function onCampoSelect() {
-  document.getElementById('ag_campoNuevo').style.display = document.getElementById('ag_campoSelect').value ? 'none' : 'block';
+  const campo = document.getElementById('ag_campoSelect').value;
+  document.getElementById('ag_campoNuevo').style.display = campo ? 'none' : 'block';
 }
 
 function poblarSelectsEditar() {
-  document.getElementById('ed_clienteSelect').innerHTML = '<option value="">Seleccionar…</option>' +
+  const sel = document.getElementById('ed_clienteSelect');
+  sel.innerHTML = '<option value="">Seleccionar…</option>' +
     maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
 }
 
 function onEditClienteSelect() {
   const cliente = document.getElementById('ed_clienteSelect').value;
   const c = maestro.clientes.find(x => x.cliente === cliente);
-  document.getElementById('ed_campoSelect').innerHTML = '<option value="">Seleccionar…</option>' +
+  const campoSel = document.getElementById('ed_campoSelect');
+  campoSel.innerHTML = '<option value="">Seleccionar…</option>' +
     (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
   document.getElementById('ed_loteSelect').innerHTML = '<option value="">Seleccionar…</option>';
 }
@@ -425,7 +428,8 @@ function onEditCampoSelect() {
   const campo = document.getElementById('ed_campoSelect').value;
   const c = maestro.clientes.find(x => x.cliente === cliente);
   const cp = c && c.campos.find(x => x.campo === campo);
-  document.getElementById('ed_loteSelect').innerHTML = '<option value="">Seleccionar…</option>' +
+  const loteSel = document.getElementById('ed_loteSelect');
+  loteSel.innerHTML = '<option value="">Seleccionar…</option>' +
     (cp ? cp.lotes.map(l => `<option value="${escapeHtml(l.lote)}">${escapeHtml(l.lote)} (${escapeHtml(l.cultivo)})</option>`).join('') : '');
 }
 
@@ -454,10 +458,14 @@ function renderArbol() {
           <div class="tree-campo-name">🌾 ${escapeHtml(cp.campo)} (${cp.lotes.length} lote${cp.lotes.length === 1 ? '' : 's'})</div>
           ${cp.lotes.length ? `<table>
             <thead><tr><th>Lote</th><th>Cultivo</th><th>Ha</th></tr></thead>
-            <tbody>${cp.lotes.map(l => `<tr><td>${escapeHtml(l.lote)}</td><td>${escapeHtml(l.cultivo)}</td><td>${escapeHtml(l.ha)}</td></tr>`).join('')}</tbody>
+            <tbody>
+              ${cp.lotes.map(l => `<tr><td>${escapeHtml(l.lote)}</td><td>${escapeHtml(l.cultivo)}</td><td>${escapeHtml(l.ha)}</td></tr>`).join('')}
+            </tbody>
           </table>` : ''}
-        </div>`).join('')}
-    </div>`).join('');
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
 }
 
 async function guardarAlta() {
@@ -473,18 +481,33 @@ async function guardarAlta() {
   const ha = document.getElementById('ag_ha').value;
   const cultivo = document.getElementById('ag_cultivo').value.trim();
 
-  if (!cliente || !campo) { msg.textContent = '⚠️ Cliente y campo son obligatorios.'; msg.className = 'msg err'; return; }
+  if (!cliente || !campo) {
+    msg.textContent = '⚠️ Cliente y campo son obligatorios.';
+    msg.className = 'msg err';
+    return;
+  }
 
-  btn.disabled = true; msg.textContent = '';
+  btn.disabled = true;
+  msg.textContent = '';
   try {
     const payload = JSON.stringify({ cliente, campo, lote, cultivo, ha });
-    const data = await jsonp(SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(payload));
+    const url = SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    msg.textContent = '✅ Guardado correctamente.'; msg.className = 'msg ok';
-    ['ag_clienteNuevo','ag_campoNuevo','ag_lote','ag_ha','ag_cultivo'].forEach(id => document.getElementById(id).value = '');
+    msg.textContent = '✅ Guardado correctamente.';
+    msg.className = 'msg ok';
+    document.getElementById('ag_clienteNuevo').value = '';
+    document.getElementById('ag_campoNuevo').value = '';
+    document.getElementById('ag_lote').value = '';
+    document.getElementById('ag_ha').value = '';
+    document.getElementById('ag_cultivo').value = '';
     await cargarMaestro();
-  } catch (err) { msg.textContent = '⚠️ ' + err.message; msg.className = 'msg err'; }
-  finally { btn.disabled = false; }
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function guardarEdicion() {
@@ -496,17 +519,28 @@ async function guardarEdicion() {
   const cultivo = document.getElementById('ed_cultivo').value.trim();
   const ha = document.getElementById('ed_ha').value;
 
-  if (!cliente || !campo || !lote) { msg.textContent = '⚠️ Elegí cliente, campo y lote.'; msg.className = 'msg err'; return; }
+  if (!cliente || !campo || !lote) {
+    msg.textContent = '⚠️ Elegí cliente, campo y lote.';
+    msg.className = 'msg err';
+    return;
+  }
 
-  btn.disabled = true; msg.textContent = '';
+  btn.disabled = true;
+  msg.textContent = '';
   try {
     const payload = JSON.stringify({ cliente, campo, lote, cultivo, ha });
-    const data = await jsonp(SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(payload));
+    const url = SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    msg.textContent = '✅ Rotación actualizada.'; msg.className = 'msg ok';
+    msg.textContent = '✅ Rotación actualizada.';
+    msg.className = 'msg ok';
     await cargarMaestro();
-  } catch (err) { msg.textContent = '⚠️ ' + err.message; msg.className = 'msg err'; }
-  finally { btn.disabled = false; }
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 cargarMaestro();
