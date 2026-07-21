@@ -113,7 +113,13 @@
   <div class="toolbar">
     <div class="field">
       <label>Campo</label>
-      <select id="fCampo" onchange="consultar()">
+      <select id="fCampo" onchange="onCampoChange()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Lote</label>
+      <select id="fLote" onchange="consultar()">
         <option value="">Todos</option>
       </select>
     </div>
@@ -190,17 +196,30 @@ function manejarError(err) {
   return false;
 }
 
+let maestroCampos = [];
+
 async function cargarFiltros() {
   document.getElementById('tituloCliente').textContent = clienteGuardado || 'Portal de Cliente';
   try {
     const data = await jsonp(SHEETS_URL + '?action=portalMaestro&token=' + encodeURIComponent(token));
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    maestroCampos = data.campos || [];
     const sel = document.getElementById('fCampo');
     sel.innerHTML = '<option value="">Todos</option>' +
-      data.campos.map(c => `<option value="${escapeHtml(c.campo)}">${escapeHtml(c.campo)}</option>`).join('');
+      maestroCampos.map(c => `<option value="${escapeHtml(c.campo)}">${escapeHtml(c.campo)}</option>`).join('');
   } catch (err) {
     if (manejarError(err)) return;
   }
+}
+
+function onCampoChange() {
+  const campo = document.getElementById('fCampo').value;
+  const campoData = maestroCampos.find(c => c.campo === campo);
+  const lotes = campoData ? (campoData.lotes || []) : [];
+  const selLote = document.getElementById('fLote');
+  selLote.innerHTML = '<option value="">Todos</option>' +
+    lotes.map(l => `<option value="${escapeHtml(l.lote)}">${escapeHtml(l.lote)}</option>`).join('');
+  consultar();
 }
 
 function renderLabores(labores) {
@@ -296,12 +315,23 @@ async function consultar() {
   const el = document.getElementById('resultado');
   el.innerHTML = '<div class="loading">Cargando…</div>';
   const campo = document.getElementById('fCampo').value;
+  const lote = document.getElementById('fLote').value;
   try {
     let url = SHEETS_URL + '?action=portalTodas&token=' + encodeURIComponent(token);
     if (campo) url += '&campo=' + encodeURIComponent(campo);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    renderLabores(data.labores);
+    let labores = data.labores;
+    // Filtrar por lote client-side si está seleccionado
+    if (lote) {
+      labores = labores.filter(lab =>
+        (lab.lotes || []).some(l => l.lote === lote)
+      ).map(lab => ({
+        ...lab,
+        lotes: (lab.lotes || []).filter(l => l.lote === lote)
+      }));
+    }
+    renderLabores(labores);
   } catch (err) {
     if (manejarError(err)) return;
     el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
