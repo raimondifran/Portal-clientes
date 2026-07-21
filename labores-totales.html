@@ -53,6 +53,15 @@
     background: #d6eaf8; color: #1a5276; border-radius: 20px; padding: 4px 12px;
     font-size: 0.78rem; font-weight: 700; white-space: nowrap;
   }
+  .ot-badge {
+    background: #1a5276; color: white; border-radius: 6px; padding: 3px 10px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap;
+  }
+  /* OT estimado (calculado para labores antiguas sin OT guardado) */
+  .ot-badge-calc {
+    background: #7f8c8d; opacity: 0.85;
+  }
+  .badges-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .lote-block { margin-bottom: 10px; }
   .lote-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 4px; }
@@ -158,6 +167,40 @@ function onClienteChange() {
     (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
 }
 
+// Calcula el OT correspondiente para cada labor si no lo tiene guardado.
+// Agrupa todas las labores por fecha, las ordena por timestamp dentro de cada fecha,
+// y asigna DDMMYYYY+1, DDMMYYYY+2, etc.
+function asignarOTsCalculados(labores) {
+  // Agrupar por fecha
+  const porFecha = {};
+  labores.forEach(l => {
+    const f = l.fecha || '';
+    if (!porFecha[f]) porFecha[f] = [];
+    porFecha[f].push(l);
+  });
+  // Para cada fecha, ordenar por timestamp y asignar OT si falta
+  Object.keys(porFecha).forEach(fecha => {
+    const grupo = porFecha[fecha].slice().sort((a, b) => {
+      const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return ta - tb;
+    });
+    // Convertir YYYY-MM-DD a DDMMYYYY
+    let fechaStr = '';
+    if (fecha && fecha.includes('-')) {
+      const [anio, mes, dia] = fecha.split('-');
+      fechaStr = dia + mes + anio;
+    }
+    grupo.forEach((labor, idx) => {
+      if (!labor.ot && fechaStr) {
+        labor.ot = fechaStr + (idx + 1);
+        labor.otCalculado = true; // bandera para estilo diferente
+      }
+    });
+  });
+  return labores;
+}
+
 function renderLabores(labores) {
   const el = document.getElementById('resultado');
   const resumen = document.getElementById('resumen');
@@ -167,6 +210,9 @@ function renderLabores(labores) {
     el.innerHTML = '<div class="empty">No hay labores para este filtro.</div>';
     return;
   }
+
+  // Asignar OT calculado a labores que no lo tengan guardado
+  asignarOTsCalculados(labores);
 
   el.innerHTML = labores.map(labor => {
     const lotesHtml = (labor.lotes || []).map(l => {
@@ -190,7 +236,12 @@ function renderLabores(labores) {
             <div class="labor-title">${escapeHtml(clienteCampo)}</div>
             <div class="labor-meta">${escapeHtml(labor.fecha)} · ${escapeHtml(labor.tipo)} · Operador: ${escapeHtml(labor.operador)}${labor.cargadoPor ? ' · Cargado por: ' + escapeHtml(labor.cargadoPor) : ''}</div>
           </div>
-          <div class="badge">${(labor.lotes || []).length} lote(s)</div>
+          <div class="badges-row">
+            ${labor.ot
+              ? `<span class="ot-badge${labor.otCalculado ? ' ot-badge-calc' : ''}" title="${labor.otCalculado ? 'OT estimado (labor anterior al sistema de OT)' : 'OT guardado'}">OT: ${escapeHtml(labor.ot)}</span>`
+              : ''}
+            <span class="badge">${(labor.lotes || []).length} lote(s)</span>
+          </div>
         </div>
         ${lotesHtml}
         ${labor.observaciones ? `<div class="obs">Observaciones: ${escapeHtml(labor.observaciones)}</div>` : ''}

@@ -106,10 +106,38 @@
   .btn-confirmar {
     padding: 13px 32px; font-size: 1.05rem; width: 100%; letter-spacing: 0.02em;
   }
+  .btn-edicion {
+    background: linear-gradient(135deg, #7d3c98, #a569bd);
+  }
   .empty { text-align: center; padding: 20px; color: #5d6d7e; font-size: 0.9rem; }
   .msg { margin-top: 12px; font-size: 0.85rem; font-weight: 600; text-align: center; }
   .msg.ok { color: #27ae60; }
   .msg.err { color: #c0392b; }
+
+  /* Banner modo edición */
+  .banner-edicion {
+    background: linear-gradient(135deg, #7d3c98, #a569bd);
+    color: white; border-radius: 10px; padding: 12px 18px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    font-size: 0.9rem;
+  }
+  .banner-edicion strong { font-size: 1rem; }
+  .banner-edicion button {
+    margin-left: auto; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+    color: white; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer;
+  }
+
+  /* Sección modificar OT */
+  .card-modificar { border: 2px solid #d5d8dc; }
+  .modificar-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  .modificar-row .form-group { flex: 1; min-width: 180px; }
+  .modificar-row input { font-size: 1rem; font-weight: 700; letter-spacing: 0.05em; }
+  .btn-cargar-ot {
+    background: linear-gradient(135deg, #7d3c98, #a569bd); color: white;
+    border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem;
+    font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .btn-cargar-ot:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* Resumen / redondeo por bidón */
   .resumen-prod-block { border: 1.5px solid #d5d8dc; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
@@ -158,6 +186,26 @@
 
 <div class="container">
 
+  <!-- Banner modo edición (oculto por defecto) -->
+  <div id="bannerEdicion" class="banner-edicion" style="display:none;">
+    ✏️ <div><strong id="bannerOT"></strong><br><span style="opacity:0.85;font-size:0.82rem;">Estás editando una labor existente. Los cambios reemplazarán los datos guardados.</span></div>
+    <button onclick="cancelarEdicion()">✕ Cancelar edición</button>
+  </div>
+
+  <!-- Modificar labor existente -->
+  <div class="card card-modificar">
+    <div class="card-title" style="margin-bottom:14px;">🔧 Modificar labor existente</div>
+    <div class="modificar-row">
+      <div class="form-group">
+        <label>Número de OT</label>
+        <input type="text" id="inputOT" placeholder="Ej: 210720261" maxlength="20"
+          onkeydown="if(event.key==='Enter') cargarLaborParaEditar()">
+      </div>
+      <button class="btn-cargar-ot" id="btnCargarOT" onclick="cargarLaborParaEditar()">🔍 Cargar OT</button>
+    </div>
+    <div class="msg" id="msgOT" style="text-align:left;margin-top:8px;"></div>
+  </div>
+
   <div class="card">
     <div class="card-title">📋 Datos generales</div>
     <div class="form-row">
@@ -185,7 +233,11 @@
     <div class="form-row">
       <div class="form-group">
         <label>Fecha</label>
-        <input type="date" id="fecha">
+        <input type="date" id="fecha" oninput="actualizarOTSugerida()">
+        <div id="otSugeridaChip" style="margin-top:6px;display:none;">
+          <span style="font-size:0.78rem;color:#5d6d7e;font-weight:600;">OT sugerida: </span>
+          <span id="otSugeridaVal" style="font-size:0.88rem;font-weight:700;color:#1a5276;letter-spacing:0.05em;background:#d6eaf8;border-radius:6px;padding:2px 8px;"></span>
+        </div>
       </div>
       <div class="form-group" id="grupoTipoAplicacion" style="display:none;">
         <label>Tipo de aplicación</label>
@@ -206,7 +258,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🌾 Lotes trabajados <span style="font-weight:400;font-size:0.8rem;color:#5d6d7e;">(click para agregar a la orden · doble click para agregarlo dos veces, por ejemplo cuando la cabecera va aparte · cambiá de campo arriba para seguir sumando lotes de otros campos)</span></div>
+    <div class="card-title">🌾 Lotes trabajados <span style="font-weight:400;font-size:0.8rem;color:#5d6d7e;">(click para agregar a la orden · doble click para agregarlo dos veces · cambiá de campo arriba para sumar lotes de otros campos)</span></div>
     <div id="lotesContainer"><div class="empty">Elegí cliente, campo y tipo de labor para ver los lotes.</div></div>
     <div class="lotes-detalle-lista" id="lotesDetalleLista"></div>
   </div>
@@ -225,14 +277,12 @@
 
 <script>
 // ⚠️ Misma URL que en las demás apps del sistema
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxtHC13vwUFmiqABSksjCJPZDe8lGrXQwgAJudpDfSiXe8TEE0qdqR3J_Z0ihP6UuZN9g/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
 
 // ── AUTENTICACIÓN DE OPERADOR ─────────────────────────────────
 const staffToken = localStorage.getItem('staffToken');
 const staffUsuario = localStorage.getItem('staffUsuario');
 const staffRol = localStorage.getItem('staffRol');
-// staffCampos: '' = todos; "Cliente::Campo,..." = solo esos campos
-const staffCampos = localStorage.getItem('staffCampos') || '';
 if (!staffToken || !staffUsuario || staffRol !== 'operador') {
   window.location.href = 'staff-login.html';
 }
@@ -240,7 +290,6 @@ function cerrarSesionStaff() {
   localStorage.removeItem('staffToken');
   localStorage.removeItem('staffUsuario');
   localStorage.removeItem('staffRol');
-  localStorage.removeItem('staffCampos');
   window.location.href = 'staff-login.html';
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -282,6 +331,121 @@ let envaseSize = {};      // { key: number } tamaño de envase por producto
 let acceptedTotals = {};  // { key: number } total ya aceptado (redondeado)
 let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira cada producto
 
+// ── MODO EDICIÓN ──────────────────────────────────────────────
+let modoEdicion = false;
+let otActual = null;
+let laborIdEdicion = null;
+
+function activarModoEdicion(ot, laborId) {
+  modoEdicion = true;
+  otActual = ot;
+  laborIdEdicion = laborId;
+  const banner = document.getElementById('bannerEdicion');
+  document.getElementById('bannerOT').textContent = 'Editando OT: ' + ot;
+  banner.style.display = 'flex';
+  const btn = document.getElementById('btnConfirmar');
+  btn.textContent = '✅ Guardar cambios (OT: ' + ot + ')';
+  btn.classList.add('btn-edicion');
+}
+
+function cancelarEdicion() {
+  modoEdicion = false;
+  otActual = null;
+  laborIdEdicion = null;
+  document.getElementById('bannerEdicion').style.display = 'none';
+  const btn = document.getElementById('btnConfirmar');
+  btn.textContent = '✅ Confirmar y guardar PDF';
+  btn.classList.remove('btn-edicion');
+  // Limpiar formulario
+  filas = [];
+  envaseSize = {};
+  acceptedTotals = {};
+  retiros = {};
+  renderLotes();
+  renderResumenProductos();
+  document.getElementById('inputOT').value = '';
+  document.getElementById('msgOT').textContent = '';
+}
+
+async function cargarLaborParaEditar() {
+  const ot = document.getElementById('inputOT').value.trim();
+  const msgEl = document.getElementById('msgOT');
+  const btn = document.getElementById('btnCargarOT');
+  if (!ot) {
+    msgEl.textContent = '⚠️ Ingresá un número de OT.';
+    msgEl.className = 'msg err';
+    return;
+  }
+  btn.disabled = true;
+  msgEl.textContent = 'Buscando…';
+  msgEl.className = 'msg';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=consultarPorOT&ot=' + encodeURIComponent(ot));
+    if (!data.ok) throw new Error(data.error || 'No se encontró la OT');
+    const labor = data.labor;
+    if (!labor) throw new Error('No se encontró ninguna labor con OT ' + ot);
+
+    // Cancelar cualquier edición previa
+    cancelarEdicion();
+
+    // Poblar formulario
+    setSelectValue('cliente', labor.cliente);
+    onClienteChange();
+    // Tipo
+    setSelectValue('tipo', labor.tipo);
+    onTipoChange();
+    // Fecha
+    document.getElementById('fecha').value = labor.fecha || '';
+    // Operador y obs
+    document.getElementById('operador').value = labor.operador || '';
+    document.getElementById('observaciones').value = labor.observaciones || '';
+    // Tipo de aplicación
+    if (labor.lotes && labor.lotes[0] && labor.lotes[0].detalle && labor.lotes[0].detalle.tipoAplicacion) {
+      setSelectValue('tipoAplicacion', labor.lotes[0].detalle.tipoAplicacion);
+    }
+
+    // Cargar lotes directamente en filas
+    filas = [];
+    filaCounter = 0;
+    (labor.lotes || []).forEach(l => {
+      filaCounter++;
+      filas.push({
+        id: 'f' + filaCounter,
+        campo: l.campo || labor.campo || '',
+        lote: l.lote || '',
+        cultivoActual: l.cultivo || '',
+        ha: l.ha || '',
+        productos: (l.productos && l.productos.length)
+          ? l.productos.map(p => ({ nombre: p.nombre || '', dosis: p.dosis || '', unidad: p.unidad || 'L/ha' }))
+          : [{ nombre: '', dosis: '', unidad: 'L/ha' }],
+        detalle: l.detalle || {}
+      });
+    });
+
+    renderLotesDetalleLista();
+    renderResumenProductos();
+    activarModoEdicion(ot, labor.laborId);
+
+    msgEl.textContent = '✅ Labor cargada. Hacé los cambios y confirmá.';
+    msgEl.className = 'msg ok';
+  } catch (err) {
+    msgEl.textContent = '⚠️ ' + err.message;
+    msgEl.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function setSelectValue(id, value) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === value) { sel.selectedIndex = i; return; }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+
 function jsonpScript(url) {
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonp_cb_' + (jsonpCounter++);
@@ -314,7 +478,7 @@ async function jsonp(url) {
 }
 
 function guardarSilencioso(url) {
-  new Image().src = url; // GET silencioso, no necesita CORS
+  new Image().src = url;
 }
 
 function escapeHtml(str) {
@@ -378,21 +542,6 @@ async function cargarMaestro() {
     const data = await jsonp(SHEETS_URL + '?action=maestro');
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     maestro = data;
-
-    // Si el operador tiene campos restringidos, filtrar el maestro
-    if (staffCampos) {
-      const permitidos = new Set(staffCampos.split(',').map(s => s.trim()).filter(Boolean));
-      maestro = {
-        ...data,
-        clientes: data.clientes
-          .map(c => {
-            const camposFiltrados = c.campos.filter(cp => permitidos.has(c.cliente + '::' + cp.campo));
-            return camposFiltrados.length ? { ...c, campos: camposFiltrados } : null;
-          })
-          .filter(Boolean)
-      };
-    }
-
     const sel = document.getElementById('cliente');
     sel.innerHTML = '<option value="">Seleccionar…</option>' +
       maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
@@ -406,17 +555,17 @@ function onClienteChange() {
   const campoSel = document.getElementById('campo');
   campoSel.innerHTML = '<option value="">Seleccionar…</option>' +
     (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
-  filas = [];
-  envaseSize = {};
-  acceptedTotals = {};
-  retiros = {};
-  renderLotes();
-  renderResumenProductos();
+  if (!modoEdicion) {
+    filas = [];
+    envaseSize = {};
+    acceptedTotals = {};
+    retiros = {};
+    renderLotes();
+    renderResumenProductos();
+  }
 }
 
 function onCampoChange() {
-  // OJO: acá NO se resetea `filas` — así se pueden ir sumando lotes
-  // de distintos campos del mismo cliente a la misma orden de trabajo.
   renderLotes();
 }
 
@@ -424,12 +573,14 @@ function onTipoChange() {
   const tipo = document.getElementById('tipo').value;
   const conf = CAMPOS_POR_TIPO[tipo];
   document.getElementById('grupoTipoAplicacion').style.display = (conf && conf.tipoAplicacion) ? 'block' : 'none';
-  filas = [];
-  envaseSize = {};
-  acceptedTotals = {};
-  retiros = {};
-  renderLotes();
-  renderResumenProductos();
+  if (!modoEdicion) {
+    filas = [];
+    envaseSize = {};
+    acceptedTotals = {};
+    retiros = {};
+    renderLotes();
+    renderResumenProductos();
+  }
 }
 
 function contarInstancias(campo, lote) {
@@ -475,8 +626,6 @@ function renderLotes() {
   renderLotesDetalleLista();
 }
 
-// Delegación de click: como el contenido de #lotesContainer se re-renderiza,
-// el listener se ata una sola vez al contenedor (que sí es estable).
 document.getElementById('lotesContainer').addEventListener('click', e => {
   const card = e.target.closest('.lote-card');
   if (!card) return;
@@ -582,7 +731,7 @@ function renderDetalleLote(id) {
     detalleEl.innerHTML = `
       ${copiarSelectorHtml(id)}
       <div class="campos-tipo">${conf.campos.map(c => {
-        const val = c.key === 'cultivoNuevo' ? (f.cultivoActual || '') : (f.detalle[c.key] !== undefined ? f.detalle[c.key] : '');
+        const val = c.key === 'cultivoNuevo' ? (f.detalle[c.key] !== undefined ? f.detalle[c.key] : (f.cultivoActual || '')) : (f.detalle[c.key] !== undefined ? f.detalle[c.key] : '');
         if (c.type === 'select') {
           return `<div class="form-group"><label>${c.label}</label>
             <select onchange="setDetalle('${id}','${c.key}',this.value)">
@@ -636,24 +785,6 @@ function renderProductos(id) {
   renderResumenProductos();
 }
 
-function renderProductosSinResumen(id) {
-  const cont = document.getElementById('prods_' + id);
-  if (!cont) return;
-  const f = getFila(id);
-  cont.innerHTML = f.productos.map((p, idx) => `
-    <div class="prod-row">
-      <input class="p-nombre" placeholder="Producto" value="${escapeHtml(p.nombre)}"
-        oninput="getFila('${id}').productos[${idx}].nombre = this.value; renderResumenProductos();">
-      <input class="p-dosis" type="number" step="0.01" placeholder="Dosis" value="${escapeHtml(p.dosis)}"
-        oninput="getFila('${id}').productos[${idx}].dosis = this.value; renderResumenProductos();">
-      <select class="p-unidad" onchange="getFila('${id}').productos[${idx}].unidad = this.value; renderResumenProductos();">
-        ${UNIDADES_PRODUCTO.map(u => `<option ${u === p.unidad ? 'selected' : ''}>${u}</option>`).join('')}
-      </select>
-      <button type="button" class="p-del" onclick="quitarProducto('${id}',${idx})">✕</button>
-    </div>
-  `).join('');
-}
-
 // ── RESUMEN POR PRODUCTO + AJUSTE POR BIDÓN ──────────────────
 function eKey(nombre, unidad) { return nombre.trim().toLowerCase() + '|||' + unidad; }
 
@@ -692,7 +823,15 @@ function renderResumenProductos() {
     const ajustado = acceptedTotals[k] !== undefined;
     const displayTotal = ajustado ? acceptedTotals[k] : prod.total;
     const factor = calcularFactor(k, mapa);
-    if (!retiros[k]) retiros[k] = [{ deposito: '', cantidad: Math.round(displayTotal * 100) / 100 }];
+
+    // ── FIX: sincronizar la cantidad de retiro con el total efectivo actual
+    // Si hay solo un retiro sin depósito asignado, se actualiza automáticamente.
+    const efectTotal = Math.round(displayTotal * 100) / 100;
+    if (!retiros[k]) {
+      retiros[k] = [{ deposito: '', cantidad: efectTotal }];
+    } else if (retiros[k].length === 1 && !retiros[k][0].deposito) {
+      retiros[k][0].cantidad = efectTotal;
+    }
 
     const filasHtml = prod.lotes.map(l => `
       <tr>
@@ -816,10 +955,6 @@ function recalcEnvase(k) {
   if (el) el.innerHTML = buildEnvaseChips(k, prod.total, envase, prod.unidad, prod.lotes);
 }
 
-// El ajuste por bidón NO modifica la dosis cargada en cada lote —
-// solo guarda el total aceptado. La dosis final ajustada se calcula
-// al momento de mostrar/guardar (ver calcularFactor / confirmar()).
-// Así, "Deshacer ajuste" siempre puede volver al valor original.
 function aceptarAjuste(k, newTotal) {
   const mapa = calcularMapaProductos();
   const prod = mapa[k];
@@ -833,7 +968,7 @@ function deshacerAjuste(k) {
   renderResumenProductos();
 }
 
-// ── RETIRO / DEPÓSITO (de dónde se retira cada producto) ──────
+// ── RETIRO / DEPÓSITO ──────────────────────────────────────────
 function agregarRetiro(k) {
   if (!retiros[k]) retiros[k] = [];
   const mapa = calcularMapaProductos();
@@ -888,8 +1023,6 @@ async function confirmar() {
 
   try {
     const conf = CAMPOS_POR_TIPO[tipo];
-    // Mapa de productos ANTES de aplicar el ajuste, para calcular el factor
-    // de cada producto ajustado (redondeo por bidón) al momento de guardar.
     const mapaOriginal = calcularMapaProductos();
 
     const lotesPayload = filas.map(f => {
@@ -913,7 +1046,36 @@ async function confirmar() {
     const camposUnicos = [...new Set(filas.map(f => f.campo))];
     const campoLabel = camposUnicos.length === 1 ? camposUnicos[0] : camposUnicos.join(' + ');
 
-    // ── PDF (estilo AgroRaimondi, tonos verdes, ordenado por producto) ──
+    // ── GUARDAR EN BACKEND PRIMERO para obtener el OT ──
+    const payload = JSON.stringify({
+      fecha, tipo, operador, observaciones,
+      planilla: cliente + ' - ' + campoLabel,
+      cliente, campo: campoLabel,
+      lotes: lotesPayload
+    });
+
+    let resGuardar;
+    if (modoEdicion) {
+      const editarUrl = SHEETS_URL
+        + '?action=editarLaborAuth'
+        + '&token=' + encodeURIComponent(staffToken)
+        + '&laborId=' + encodeURIComponent(laborIdEdicion)
+        + '&ot=' + encodeURIComponent(otActual)
+        + '&payload=' + encodeURIComponent(payload);
+      resGuardar = await jsonp(editarUrl);
+    } else {
+      const guardarUrl = SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
+      resGuardar = await jsonp(guardarUrl);
+    }
+
+    if (!resGuardar.ok) {
+      if (/sesión|iniciar sesión/i.test(resGuardar.error || '')) { cerrarSesionStaff(); return; }
+      throw new Error(resGuardar.error || 'No se pudo guardar la labor');
+    }
+
+    const otGenerado = resGuardar.ot || '';
+
+    // ── GENERAR PDF con OT ya conocido ──
     const logoDataUrl = await getLogoDataUrl().catch(() => null);
     const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -938,7 +1100,7 @@ async function confirmar() {
       doc.text('Planilla de Labores', marginL, 11);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      const meta = [cliente, campoLabel, tipo, fechaFmt, operador].filter(Boolean).join('  |  ');
+      const meta = [otGenerado ? 'OT: ' + otGenerado : '', cliente, campoLabel, tipo, fechaFmt, operador].filter(Boolean).join('  |  ');
       doc.text(meta, marginL, 19);
       doc.setTextColor(0, 0, 0);
     }
@@ -955,7 +1117,6 @@ async function confirmar() {
     drawPageHeader();
 
     if (conf.modo === 'productos') {
-      // ── SECCIÓN: APLICACION POR LOTE
       doc.setFillColor(...GRIS);
       doc.rect(marginL, y, cW, 8, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
@@ -1005,7 +1166,6 @@ async function confirmar() {
         y = doc.lastAutoTable.finalY + 7;
       });
 
-      // ── SECCIÓN: RESUMEN DE PRODUCTOS TOTALES (a comprar / stock)
       if (y > 220) { doc.addPage(); drawPageHeader(); y = 40; }
       doc.setFillColor(...GRIS);
       doc.rect(marginL, y, cW, 8, 'F');
@@ -1037,7 +1197,7 @@ async function confirmar() {
       });
 
       doc.autoTable({
-        head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a comprar', 'Sobrante', 'Retira de']],
+        head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a retirar', 'Sobrante', 'Retira de']],
         body: stockRows,
         startY: y,
         margin: { left: marginL, right: marginL },
@@ -1063,7 +1223,6 @@ async function confirmar() {
       });
       y = doc.lastAutoTable.finalY + 9;
     } else {
-      // Tipos sin productos (Siembra / Cosecha / Disco / Cultivador): detalle simple por lote
       doc.setFillColor(...GRIS);
       doc.rect(marginL, y, cW, 8, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
@@ -1094,23 +1253,9 @@ async function confirmar() {
       drawPageFooter(i, totalPages);
     }
 
-    // ── 1. GUARDAR EN LA BASE DE DATOS PRIMERO (antes de abrir el PDF)
-    msg.textContent = 'Guardando en la base de datos…';
-    const payload = JSON.stringify({
-      fecha, tipo, operador, observaciones,
-      planilla: cliente + ' - ' + campoLabel,
-      cliente, campo: campoLabel,
-      lotes: lotesPayload
-    });
-    const guardarUrl = SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
-    const resGuardar = await jsonp(guardarUrl);
-    if (!resGuardar.ok) {
-      if (/sesión|iniciar sesión/i.test(resGuardar.error || '')) {
-        cerrarSesionStaff();
-        return;
-      }
-      throw new Error(resGuardar.error || 'No se pudo guardar la labor');
-    }
+    const prefOT = otGenerado ? 'OT' + otGenerado + '_' : '';
+    const nombreArchivo = `${prefOT}${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
+    doc.save(nombreArchivo);
 
     // Si es Siembra, actualizar el cultivo de cada lote en el Maestro (rotación).
     if (tipo === 'Siembra') {
@@ -1120,12 +1265,13 @@ async function confirmar() {
       });
     }
 
-    // ── 2. GENERAR Y ABRIR EL PDF (después de guardar exitosamente)
-    const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
-    doc.save(nombreArchivo);
-
-    msg.textContent = '✅ Labor guardada en la base de datos. PDF generado.';
+    const accion = modoEdicion ? 'modificada' : 'guardada';
+    msg.textContent = `✅ Labor ${accion}. OT: ${otGenerado}. PDF descargado.`;
     msg.className = 'msg ok';
+
+    // Salir de modo edición si estábamos en él
+    if (modoEdicion) cancelarEdicion();
+
     filas = [];
     envaseSize = {};
     acceptedTotals = {};
@@ -1142,7 +1288,31 @@ async function confirmar() {
 
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
+// ── OT SUGERIDA ────────────────────────────────────────────────
+let otSugeridaTimer = null;
+async function actualizarOTSugerida() {
+  if (modoEdicion) return; // en modo edición ya tiene OT
+  const fecha = document.getElementById('fecha').value;
+  const chip = document.getElementById('otSugeridaChip');
+  const val = document.getElementById('otSugeridaVal');
+  if (!fecha) { chip.style.display = 'none'; return; }
+  val.textContent = '…';
+  chip.style.display = 'block';
+  clearTimeout(otSugeridaTimer);
+  otSugeridaTimer = setTimeout(async () => {
+    try {
+      const data = await jsonp(SHEETS_URL + '?action=proximaOT&fecha=' + encodeURIComponent(fecha));
+      if (data.ok && data.ot) {
+        val.textContent = data.ot;
+        chip.style.display = 'block';
+      }
+    } catch (e) { chip.style.display = 'none'; }
+  }, 400);
+}
+
 cargarMaestro();
+// Mostrar OT sugerida para la fecha de hoy al cargar
+actualizarOTSugerida();
 </script>
 </body>
 </html>
