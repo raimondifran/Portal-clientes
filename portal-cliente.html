@@ -113,13 +113,7 @@
   <div class="toolbar">
     <div class="field">
       <label>Campo</label>
-      <select id="fCampo" onchange="onCampoChange()">
-        <option value="">Todos</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Lote</label>
-      <select id="fLote" onchange="filtrarYRenderizar()">
+      <select id="fCampo" onchange="consultar()">
         <option value="">Todos</option>
       </select>
     </div>
@@ -132,7 +126,7 @@
 
 <script>
 // ⚠️ Misma URL que en las demás apps del sistema
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxtHC13vwUFmiqABSksjCJPZDe8lGrXQwgAJudpDfSiXe8TEE0qdqR3J_Z0ihP6UuZN9g/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
 
 const token = localStorage.getItem('portalToken');
 const clienteGuardado = localStorage.getItem('portalCliente');
@@ -156,17 +150,20 @@ function jsonpScript(url) {
 }
 
 async function jsonpFetch(url) {
-  const res = await fetch(url, { method: 'GET' });
+  // cache: 'no-store' fuerza al navegador a no usar caché en esta llamada
+  const res = await fetch(url, { method: 'GET', cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
 async function jsonp(url) {
+  // Agregamos timestamp para evitar caché de Google CDN
+  const urlNocache = url + '&_t=' + Date.now();
   try {
-    return await jsonpFetch(url);
+    return await jsonpFetch(urlNocache);
   } catch (errFetch) {
     try {
-      return await jsonpScript(url);
+      return await jsonpScript(urlNocache);
     } catch (errScript) {
       throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
     }
@@ -193,20 +190,17 @@ function manejarError(err) {
   return false;
 }
 
-function cargarFiltros() {
+async function cargarFiltros() {
   document.getElementById('tituloCliente').textContent = clienteGuardado || 'Portal de Cliente';
-}
-
-// Pobla el selector de campos desde los datos de labores ya cargados
-function actualizarSelectCampos(labores) {
-  const sel = document.getElementById('fCampo');
-  const campoActual = sel.value;
-  // Extraer campos únicos desde los lotes individuales (no el campo combinado "A + B")
-  const campos = [...new Set(
-    labores.flatMap(l => (l.lotes || []).map(lt => lt.campo).filter(Boolean))
-  )].sort();
-  sel.innerHTML = '<option value="">Todos</option>' +
-    campos.map(c => `<option value="${escapeHtml(c)}" ${c === campoActual ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=portalMaestro&token=' + encodeURIComponent(token));
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    const sel = document.getElementById('fCampo');
+    sel.innerHTML = '<option value="">Todos</option>' +
+      data.campos.map(c => `<option value="${escapeHtml(c.campo)}">${escapeHtml(c.campo)}</option>`).join('');
+  } catch (err) {
+    if (manejarError(err)) return;
+  }
 }
 
 function renderLabores(labores) {
@@ -254,36 +248,6 @@ function renderLabores(labores) {
 }
 
 let ultimasLabores = [];
-let todasLasLabores = []; // copia completa sin filtro de lote
-
-function onCampoChange() {
-  // Al cambiar campo, resetear lote y recargar
-  document.getElementById('fLote').innerHTML = '<option value="">Todos</option>';
-  consultar();
-}
-
-function filtrarYRenderizar() {
-  const lote = document.getElementById('fLote').value;
-  if (!lote) {
-    renderLabores(todasLasLabores);
-    return;
-  }
-  const filtradas = todasLasLabores.map(labor => {
-    const lotesFiltrados = (labor.lotes || []).filter(l => l.lote === lote);
-    return lotesFiltrados.length ? { ...labor, lotes: lotesFiltrados } : null;
-  }).filter(Boolean);
-  renderLabores(filtradas);
-}
-
-function actualizarSelectLotes(labores) {
-  const lotesSel = document.getElementById('fLote');
-  const loteActual = lotesSel.value;
-  const lotes = [...new Set(
-    labores.flatMap(l => (l.lotes || []).map(lt => lt.lote)).filter(Boolean)
-  )].sort();
-  lotesSel.innerHTML = '<option value="">Todos</option>' +
-    lotes.map(lt => `<option value="${escapeHtml(lt)}" ${lt === loteActual ? 'selected' : ''}>${escapeHtml(lt)}</option>`).join('');
-}
 
 function csvEscape(v) {
   const s = v == null ? '' : String(v);
@@ -337,11 +301,7 @@ async function consultar() {
     if (campo) url += '&campo=' + encodeURIComponent(campo);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    todasLasLabores = data.labores;
-    // Poblar selector de campos solo cuando mostramos todo (carga inicial)
-    if (!campo) actualizarSelectCampos(data.labores);
-    actualizarSelectLotes(data.labores);
-    filtrarYRenderizar();
+    renderLabores(data.labores);
   } catch (err) {
     if (manejarError(err)) return;
     el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
