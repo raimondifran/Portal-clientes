@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inicio — AgroRaimondi</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif; background: #f4f7f1;
+    color: #1e2b1a; min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #2d5f24, #4a8c3a);
+    color: white; padding: 20px 30px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    box-shadow: 0 2px 10px rgba(45,95,36,0.25);
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 14px; }
+  .logo-text { line-height: 1.2; }
+  .logo-text .sup { font-size: 0.7rem; letter-spacing: 4px; color: #C9A200; font-weight: 500; }
+  .logo-text .name { font-size: 1.3rem; font-weight: 500; letter-spacing: 1px; }
+  .logo-text .sub { font-size: 0.65rem; letter-spacing: 1.2px; opacity: 0.8; }
+  .user-bar { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+  .user-bar strong { font-size: 0.95rem; }
+  .btn-cerrar {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+    color: white; border-radius: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer;
+  }
+
+  .container { max-width: 900px; margin: 36px auto; padding: 0 20px; }
+
+  .bienvenida {
+    font-size: 1.05rem; color: #2d5f24; font-weight: 600; margin-bottom: 28px;
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+
+  .card {
+    background: white; border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 26px 24px; text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 10px;
+    border: 2px solid transparent;
+    transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: #4a8c3a; box-shadow: 0 6px 20px rgba(45,95,36,0.15);
+    transform: translateY(-2px);
+  }
+  .card-icon { font-size: 2.2rem; }
+  .card-title { font-size: 1.05rem; font-weight: 700; color: #1e2b1a; }
+  .card-desc { font-size: 0.84rem; color: #5d6d7e; line-height: 1.5; }
+  .card-arrow { margin-top: auto; font-size: 0.82rem; font-weight: 700; color: #4a8c3a; }
+
+  .card.verde { border-left: 4px solid #4a8c3a; }
+  .card.azul  { border-left: 4px solid #2e86c1; }
+  .card.dorado { border-left: 4px solid #C9A200; }
+  .card.gris  { border-left: 4px solid #7f8c8d; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <svg width="28" height="30" viewBox="0 0 24 26" fill="none" stroke="#C9A200" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="25" x2="12" y2="5"/>
+      <path d="M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7"/>
+      <path d="M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7"/>
+      <path d="M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13"/>
+      <path d="M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13"/>
+      <path d="M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19"/>
+      <path d="M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19"/>
+    </svg>
+    <div class="logo-text">
+      <div class="sup">AGRO</div>
+      <div class="name">RAIMONDI</div>
+      <div class="sub">ASESORAMIENTO AGROPECUARIO</div>
+    </div>
+  </div>
+  <div class="user-bar">
+    <span>👤 <strong id="usuarioLabel"></strong></span>
+    <button class="btn-cerrar" onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="bienvenida" id="bienvenidaMsg">Bienvenido al sistema de gestión de labores.</div>
+
+  <div class="grid">
+
+    <a class="card verde" href="planilla-labores.html">
+      <div class="card-icon">📋</div>
+      <div class="card-title">Cargar labor</div>
+      <div class="card-desc">Registrá fumigaciones, fertilizaciones, siembras, cosechas y más. Con redondeo por bidón y exportación a PDF.</div>
+      <div class="card-arrow">Abrir →</div>
+    </a>
+
+    <a class="card azul" href="gestionar-campos.html">
+      <div class="card-icon">🗂️</div>
+      <div class="card-title">Gestionar campos</div>
+      <div class="card-desc">Alta de clientes, campos y lotes. Actualización de rotación de cultivos. Creación de usuarios.</div>
+      <div class="card-arrow">Abrir →</div>
+    </a>
+
+    <a class="card dorado" href="labores-totales.html">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Historial de labores</div>
+      <div class="card-desc">Consultá y filtrá todas las labores registradas. Búsqueda por cliente, campo, tipo y fecha.</div>
+      <div class="card-arrow">Abrir →</div>
+    </a>
+
+    <a class="card gris" href="login.html">
+      <div class="card-icon">👤</div>
+      <div class="card-title">Portal clientes</div>
+      <div class="card-desc">Acceso para que cada cliente vea sus propias labores con exportación a Excel.</div>
+      <div class="card-arrow">Abrir →</div>
+    </a>
+
+  </div>
+</div>
+
+<script>
+const staffToken   = localStorage.getItem('staffToken');
+const staffUsuario = localStorage.getItem('staffUsuario');
+const staffRol     = localStorage.getItem('staffRol');
+
+if (!staffToken || !staffUsuario || staffRol !== 'operador') {
+  window.location.href = 'staff-login.html';
+}
+
+document.getElementById('usuarioLabel').textContent = staffUsuario || '';
+const hora = new Date().getHours();
+const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
+document.getElementById('bienvenidaMsg').textContent = saludo + ', ' + (staffUsuario || '') + '. ¿Qué querés hacer hoy?';
+
+function cerrarSesion() {
+  localStorage.removeItem('staffToken');
+  localStorage.removeItem('staffUsuario');
+  localStorage.removeItem('staffRol');
+  localStorage.removeItem('staffCamposPermitidos');
+  window.location.href = 'staff-login.html';
+}
+</script>
+</body>
+</html>

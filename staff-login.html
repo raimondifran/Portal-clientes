@@ -155,7 +155,7 @@ async function login() {
     localStorage.setItem('staffUsuario', data.usuario);
     localStorage.setItem('staffRol', data.rol);
     localStorage.setItem('staffCamposPermitidos', JSON.stringify(data.camposPermitidos || []));
-    window.location.href = 'planilla-labores.html';
+    window.location.href = 'staff-home.html';
   } catch (err) {
     msg.textContent = '⚠️ ' + err.message;
     msg.className = 'msg err';
