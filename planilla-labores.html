@@ -166,29 +166,22 @@
 
 <div class="container">
 
-  <!-- Panel selector de OT anteriores -->
-  <div id="otSelectorPanel" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-      <strong style="color:#1a5276;">📋 Seleccioná una OT anterior para editar</strong>
-      <button onclick="document.getElementById('otSelectorPanel').style.display='none'" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#5d6d7e;">✕</button>
-    </div>
-    <div class="ot-lista" id="otLista"><div class="empty" style="padding:14px;">Cargando…</div></div>
-  </div>
-
   <div class="card">
     <div class="card-title">📋 Datos generales</div>
     <!-- Fila OT -->
     <div class="form-row" style="align-items:flex-end;">
-      <div class="form-group" style="flex:0 0 auto;min-width:180px;">
+      <div class="form-group" style="flex:0 0 auto;min-width:200px;">
         <label>N° de Orden de Trabajo</label>
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="nroOT" readonly style="background:#f0f4f8;font-weight:700;color:#1a5276;font-size:1rem;width:150px;">
+          <input type="text" id="nroOT"
+            style="font-weight:700;color:#1a5276;font-size:1rem;width:160px;"
+            placeholder="Cargando…"
+            onblur="onOTChange()"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();onOTChange();}">
           <span id="otEditandoBadge" class="ot-editando-badge" style="display:none;">✏️ Editando</span>
+          <span id="otNuevaBadge" style="display:none;background:#eafaf1;color:#1e8449;border-radius:6px;padding:3px 10px;font-size:0.78rem;font-weight:700;">🆕 Nueva</span>
         </div>
-      </div>
-      <div class="form-group" style="flex:0 0 auto;">
-        <label>&nbsp;</label>
-        <button class="btn" style="background:#eef4fa;color:#1a5276;border:1.5px solid #d6eaf8;width:auto;padding:9px 14px;font-size:0.85rem;" onclick="toggleSelectorOT()">📋 Abrir OT anterior</button>
+        <div style="font-size:0.75rem;color:#5d6d7e;margin-top:3px;">Escribí un número existente para cargar esa OT</div>
       </div>
       <div class="form-group" style="flex:0 0 auto;" id="btnNuevaOTWrapper" style="display:none;">
         <label>&nbsp;</label>
@@ -319,39 +312,36 @@ let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira
 let laborIdEditando = null; // si se está editando una OT existente
 
 // ── ÓRDENES DE TRABAJO ────────────────────────────────────────
+let otsCargadas = []; // cache de OTs existentes
+
 async function cargarSiguienteOT() {
   try {
     const fecha = document.getElementById('fecha').value;
     const url = SHEETS_URL + '?action=siguienteOT' + (fecha ? '&fecha=' + encodeURIComponent(fecha) : '');
     const data = await jsonp(url);
-    if (data.ok) document.getElementById('nroOT').value = data.ot;
+    if (data.ok) {
+      document.getElementById('nroOT').value = data.ot;
+      document.getElementById('otNuevaBadge').style.display = 'inline';
+    }
   } catch(e) { /* silencioso */ }
 }
 
-async function toggleSelectorOT() {
-  const panel = document.getElementById('otSelectorPanel');
-  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-  document.getElementById('otLista').innerHTML = '<div class="empty" style="padding:14px;">Cargando…</div>';
+async function cargarListaOTs() {
   try {
     const data = await jsonp(SHEETS_URL + '?action=listarOTs');
-    if (!data.ok) throw new Error(data.error);
-    if (!data.ots.length) {
-      document.getElementById('otLista').innerHTML = '<div class="empty" style="padding:14px;">No hay OTs guardadas todavía.</div>';
-      return;
-    }
-    document.getElementById('otLista').innerHTML = data.ots.map(ot => `
-      <div class="ot-item" onclick="seleccionarOT('${escapeHtml(ot.laborId)}','${escapeHtml(ot.ot)}')">
-        <span class="ot-num">OT ${escapeHtml(ot.ot) || '(sin nro)'}</span>
-        <span class="ot-meta">${escapeHtml(ot.cliente)} · ${escapeHtml(ot.campo)} · ${escapeHtml(ot.tipo)} · ${escapeHtml(String(ot.fecha).split('T')[0])}</span>
-      </div>
-    `).join('');
-  } catch(e) {
-    document.getElementById('otLista').innerHTML = '<div class="empty" style="padding:14px;color:#c0392b;">⚠️ ' + escapeHtml(e.message) + '</div>';
-  }
+    if (data.ok) otsCargadas = data.ots;
+  } catch(e) { /* silencioso */ }
 }
 
-async function seleccionarOT(laborId, nroOT) {
+async function onOTChange() {
+  const valor = document.getElementById('nroOT').value.trim();
+  if (!valor) return;
+  const encontrada = otsCargadas.find(o => o.ot === valor);
+  if (!encontrada) return; // número nuevo, no hacer nada
+  await cargarOTEnFormulario(encontrada.laborId, valor);
+}
+
+async function cargarOTEnFormulario(laborId, nroOT) {
   try {
     const data = await jsonp(SHEETS_URL + '?action=cargarOT&token=' + encodeURIComponent(staffToken) + '&laborId=' + encodeURIComponent(laborId));
     if (!data.ok) throw new Error(data.error);
@@ -362,10 +352,8 @@ async function seleccionarOT(laborId, nroOT) {
     await new Promise(r => setTimeout(r, 0));
     const primerCampo = labor.lotes && labor.lotes[0] ? labor.lotes[0].campo : '';
     if (primerCampo) document.getElementById('campo').value = primerCampo;
-
     document.getElementById('tipo').value = labor.tipo;
     onTipoChange();
-
     if (labor.fecha) document.getElementById('fecha').value = String(labor.fecha).split('T')[0];
     if (labor.operador) document.getElementById('operador').value = labor.operador;
     if (labor.observaciones) document.getElementById('observaciones').value = labor.observaciones;
@@ -379,20 +367,12 @@ async function seleccionarOT(laborId, nroOT) {
       const prods = lote.productos && lote.productos.length
         ? lote.productos.map(p => ({ nombre: p.nombre || '', dosis: p.dosis || '', unidad: p.unidad || 'L/ha' }))
         : [{ nombre: '', dosis: '', unidad: 'L/ha' }];
-      filas.push({
-        id: 'f' + filaCounter,
-        campo: lote.campo || primerCampo,
-        lote: lote.lote,
-        cultivoActual: lote.cultivo,
-        ha: lote.ha,
-        productos: prods,
-        detalle: lote.detalle || {}
-      });
+      filas.push({ id: 'f' + filaCounter, campo: lote.campo || primerCampo, lote: lote.lote, cultivoActual: lote.cultivo, ha: lote.ha, productos: prods, detalle: lote.detalle || {} });
     });
 
     document.getElementById('otEditandoBadge').style.display = 'inline';
+    document.getElementById('otNuevaBadge').style.display = 'none';
     document.getElementById('btnNuevaOTWrapper').style.display = 'block';
-    document.getElementById('otSelectorPanel').style.display = 'none';
     renderLotes();
     renderResumenProductos();
   } catch(e) {
@@ -1270,8 +1250,10 @@ async function confirmar() {
     retiros = {};
     laborIdEditando = null;
     document.getElementById('otEditandoBadge').style.display = 'none';
+    document.getElementById('otNuevaBadge').style.display = 'inline';
     document.getElementById('btnNuevaOTWrapper').style.display = 'none';
     cargarSiguienteOT();
+    cargarListaOTs(); // refrescar la lista para incluir la OT recién guardada
     renderLotes();
     renderResumenProductos();
   } catch (err) {
@@ -1286,6 +1268,7 @@ document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
 cargarMaestro();
 cargarSiguienteOT();
+cargarListaOTs();
 </script>
 </body>
 </html>
