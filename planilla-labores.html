@@ -138,6 +138,14 @@
     font-size: 0.82rem; font-weight: 700; background: #1a5276; color: #fff;
   }
   .btn-opcion:disabled { background: #d6eaf8; color: #1a5276; cursor: default; }
+  .ot-badge { background:#d6eaf8; color:#1a5276; border-radius:6px; padding:3px 10px; font-size:0.8rem; font-weight:700; margin-left:8px; }
+  .ot-editando-badge { background:#fdebd0; color:#9a3412; border-radius:6px; padding:3px 10px; font-size:0.78rem; font-weight:700; }
+  #otSelectorPanel { border:2px solid #2e86c1; border-radius:12px; padding:16px; margin-bottom:16px; background:#f8fbff; }
+  .ot-lista { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; margin-top:10px; }
+  .ot-item { display:flex; align-items:center; gap:10px; padding:8px 12px; background:white; border:1.5px solid #d5d8dc; border-radius:8px; cursor:pointer; font-size:0.87rem; transition:border-color 0.15s; }
+  .ot-item:hover { border-color:#2e86c1; background:#eaf4fb; }
+  .ot-item .ot-num { font-weight:700; color:#1a5276; min-width:110px; }
+  .ot-item .ot-meta { color:#5d6d7e; flex:1; }
 </style>
 </head>
 <body>
@@ -158,8 +166,35 @@
 
 <div class="container">
 
+  <!-- Panel selector de OT anteriores -->
+  <div id="otSelectorPanel" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <strong style="color:#1a5276;">📋 Seleccioná una OT anterior para editar</strong>
+      <button onclick="document.getElementById('otSelectorPanel').style.display='none'" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#5d6d7e;">✕</button>
+    </div>
+    <div class="ot-lista" id="otLista"><div class="empty" style="padding:14px;">Cargando…</div></div>
+  </div>
+
   <div class="card">
     <div class="card-title">📋 Datos generales</div>
+    <!-- Fila OT -->
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group" style="flex:0 0 auto;min-width:180px;">
+        <label>N° de Orden de Trabajo</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="text" id="nroOT" readonly style="background:#f0f4f8;font-weight:700;color:#1a5276;font-size:1rem;width:150px;">
+          <span id="otEditandoBadge" class="ot-editando-badge" style="display:none;">✏️ Editando</span>
+        </div>
+      </div>
+      <div class="form-group" style="flex:0 0 auto;">
+        <label>&nbsp;</label>
+        <button class="btn" style="background:#eef4fa;color:#1a5276;border:1.5px solid #d6eaf8;width:auto;padding:9px 14px;font-size:0.85rem;" onclick="toggleSelectorOT()">📋 Abrir OT anterior</button>
+      </div>
+      <div class="form-group" style="flex:0 0 auto;" id="btnNuevaOTWrapper" style="display:none;">
+        <label>&nbsp;</label>
+        <button class="btn" style="background:#eef4fa;color:#c0392b;border:1.5px solid #fad7d7;width:auto;padding:9px 14px;font-size:0.85rem;" onclick="nuevaOT()">🆕 Nueva OT</button>
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>Cliente</label>
@@ -281,6 +316,101 @@ let jsonpCounter = 0;
 let envaseSize = {};      // { key: number } tamaño de envase por producto
 let acceptedTotals = {};  // { key: number } total ya aceptado (redondeado)
 let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira cada producto
+let laborIdEditando = null; // si se está editando una OT existente
+
+// ── ÓRDENES DE TRABAJO ────────────────────────────────────────
+async function cargarSiguienteOT() {
+  try {
+    const fecha = document.getElementById('fecha').value;
+    const url = SHEETS_URL + '?action=siguienteOT' + (fecha ? '&fecha=' + encodeURIComponent(fecha) : '');
+    const data = await jsonp(url);
+    if (data.ok) document.getElementById('nroOT').value = data.ot;
+  } catch(e) { /* silencioso */ }
+}
+
+async function toggleSelectorOT() {
+  const panel = document.getElementById('otSelectorPanel');
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  document.getElementById('otLista').innerHTML = '<div class="empty" style="padding:14px;">Cargando…</div>';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=listarOTs');
+    if (!data.ok) throw new Error(data.error);
+    if (!data.ots.length) {
+      document.getElementById('otLista').innerHTML = '<div class="empty" style="padding:14px;">No hay OTs guardadas todavía.</div>';
+      return;
+    }
+    document.getElementById('otLista').innerHTML = data.ots.map(ot => `
+      <div class="ot-item" onclick="seleccionarOT('${escapeHtml(ot.laborId)}','${escapeHtml(ot.ot)}')">
+        <span class="ot-num">OT ${escapeHtml(ot.ot) || '(sin nro)'}</span>
+        <span class="ot-meta">${escapeHtml(ot.cliente)} · ${escapeHtml(ot.campo)} · ${escapeHtml(ot.tipo)} · ${escapeHtml(String(ot.fecha).split('T')[0])}</span>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('otLista').innerHTML = '<div class="empty" style="padding:14px;color:#c0392b;">⚠️ ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function seleccionarOT(laborId, nroOT) {
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=cargarOT&token=' + encodeURIComponent(staffToken) + '&laborId=' + encodeURIComponent(laborId));
+    if (!data.ok) throw new Error(data.error);
+    const labor = data.labor;
+
+    document.getElementById('cliente').value = labor.cliente;
+    onClienteChange();
+    await new Promise(r => setTimeout(r, 0));
+    const primerCampo = labor.lotes && labor.lotes[0] ? labor.lotes[0].campo : '';
+    if (primerCampo) document.getElementById('campo').value = primerCampo;
+
+    document.getElementById('tipo').value = labor.tipo;
+    onTipoChange();
+
+    if (labor.fecha) document.getElementById('fecha').value = String(labor.fecha).split('T')[0];
+    if (labor.operador) document.getElementById('operador').value = labor.operador;
+    if (labor.observaciones) document.getElementById('observaciones').value = labor.observaciones;
+    document.getElementById('nroOT').value = nroOT || labor.ot || '';
+    laborIdEditando = laborId;
+
+    filas = [];
+    filaCounter = 0;
+    (labor.lotes || []).forEach(lote => {
+      filaCounter++;
+      const prods = lote.productos && lote.productos.length
+        ? lote.productos.map(p => ({ nombre: p.nombre || '', dosis: p.dosis || '', unidad: p.unidad || 'L/ha' }))
+        : [{ nombre: '', dosis: '', unidad: 'L/ha' }];
+      filas.push({
+        id: 'f' + filaCounter,
+        campo: lote.campo || primerCampo,
+        lote: lote.lote,
+        cultivoActual: lote.cultivo,
+        ha: lote.ha,
+        productos: prods,
+        detalle: lote.detalle || {}
+      });
+    });
+
+    document.getElementById('otEditandoBadge').style.display = 'inline';
+    document.getElementById('btnNuevaOTWrapper').style.display = 'block';
+    document.getElementById('otSelectorPanel').style.display = 'none';
+    renderLotes();
+    renderResumenProductos();
+  } catch(e) {
+    alert('⚠️ No se pudo cargar la OT: ' + e.message);
+  }
+}
+
+function nuevaOT() {
+  laborIdEditando = null;
+  document.getElementById('otEditandoBadge').style.display = 'none';
+  document.getElementById('btnNuevaOTWrapper').style.display = 'none';
+  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+  cargarSiguienteOT();
+  document.getElementById('cliente').value = '';
+  onClienteChange();
+  document.getElementById('tipo').value = '';
+  document.getElementById('observaciones').value = '';
+}
 
 function jsonpScript(url) {
   return new Promise((resolve, reject) => {
@@ -1100,15 +1230,18 @@ async function confirmar() {
       drawPageFooter(i, totalPages);
     }
 
-    const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
+    const nroOT = document.getElementById('nroOT').value || '';
+    const nombreArchivo = `OT${nroOT}_${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
     doc.save(nombreArchivo);
 
     // Guardar labor (autenticado — "cargado por" lo determina el backend por sesión)
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
       planilla: cliente + ' - ' + campoLabel,
+      ot: nroOT,
       cliente, campo: campoLabel,
-      lotes: lotesPayload
+      lotes: lotesPayload,
+      ...(laborIdEditando ? { laborId: laborIdEditando } : {})
     });
     const guardarUrl = SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
     const resGuardar = await jsonp(guardarUrl);
@@ -1135,6 +1268,10 @@ async function confirmar() {
     envaseSize = {};
     acceptedTotals = {};
     retiros = {};
+    laborIdEditando = null;
+    document.getElementById('otEditandoBadge').style.display = 'none';
+    document.getElementById('btnNuevaOTWrapper').style.display = 'none';
+    cargarSiguienteOT();
     renderLotes();
     renderResumenProductos();
   } catch (err) {
@@ -1148,6 +1285,7 @@ async function confirmar() {
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
 cargarMaestro();
+cargarSiguienteOT();
 </script>
 </body>
 </html>
