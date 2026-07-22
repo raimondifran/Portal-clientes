@@ -819,10 +819,22 @@ function aceptarAjuste(k, newTotal) {
   const prod = mapa[k];
   if (!prod || !newTotal || prod.total <= 0) return;
   acceptedTotals[k] = newTotal;
+  // Sincronizar retiro si hay una sola entrada sin depósito completado
+  if (!retiros[k] || retiros[k].length === 0) {
+    retiros[k] = [{ deposito: '', cantidad: newTotal }];
+  } else if (retiros[k].length === 1 && !retiros[k][0].deposito) {
+    retiros[k][0].cantidad = newTotal;
+  }
   renderResumenProductos();
 }
 
 function deshacerAjuste(k) {
+  // Revertir cantidad del retiro si es una sola entrada sin depósito
+  const mapa = calcularMapaProductos();
+  const prod = mapa[k];
+  if (retiros[k] && retiros[k].length === 1 && !retiros[k][0].deposito && prod) {
+    retiros[k][0].cantidad = Math.round(prod.total * 100) / 100;
+  }
   delete acceptedTotals[k];
   renderResumenProductos();
 }
