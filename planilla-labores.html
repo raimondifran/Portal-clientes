@@ -288,6 +288,7 @@ let jsonpCounter = 0;
 let envaseSize = {};      // { key: number } tamaño de envase por producto
 let acceptedTotals = {};  // { key: number } total ya aceptado (redondeado)
 let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira cada producto
+let otEnEdicion = null;   // null = OT nueva; string = OT existente que se está editando
 
 function jsonpScript(url) {
   return new Promise((resolve, reject) => {
@@ -1150,7 +1151,10 @@ async function confirmar() {
       cliente, campo: campoLabel,
       lotes: lotesPayload
     });
-    const guardarUrl = SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
+    // Si hay OT, siempre actualizar (borra filas viejas con ese OT y guarda las nuevas)
+    const guardarUrl = ot
+      ? SHEETS_URL + '?action=actualizarLaborAuth&token=' + encodeURIComponent(staffToken) + '&ot=' + encodeURIComponent(ot) + '&payload=' + encodeURIComponent(payload)
+      : SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
     const resGuardar = await jsonp(guardarUrl);
     if (!resGuardar.ok) {
       if (/sesión|iniciar sesión/i.test(resGuardar.error || '')) {
@@ -1258,7 +1262,7 @@ async function cargarOT(otBuscada) {
     renderLotes();
     renderResumenProductos();
 
-    msg.textContent = '✅ OT ' + otBuscada + ' cargada — modificá lo que necesites y confirmá para guardar.';
+    msg.textContent = '✅ OT ' + otBuscada + ' cargada — modificá lo que necesites y confirmá para reemplazarla.';
     msg.className = 'msg ok';
   } catch (err) {
     msg.textContent = '⚠️ Error buscando OT: ' + err.message;
