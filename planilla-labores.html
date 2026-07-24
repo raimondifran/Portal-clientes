@@ -1184,6 +1184,87 @@ async function confirmar() {
   }
 }
 
+// ── CARGAR OT EXISTENTE ───────────────────────────────────────
+document.getElementById('ot').addEventListener('keydown', async function(e) {
+  if (e.key !== 'Enter') return;
+  const otBuscada = this.value.trim();
+  if (!otBuscada) return;
+  await cargarOT(otBuscada);
+});
+
+async function cargarOT(otBuscada) {
+  const msg = document.getElementById('msg');
+  msg.textContent = '🔍 Buscando OT ' + otBuscada + '…';
+  msg.className = 'msg';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=buscarPorOT&ot=' + encodeURIComponent(otBuscada));
+    if (!data.ok || !data.labores || !data.labores.length) {
+      msg.textContent = '';
+      return; // OT nueva, no pasa nada
+    }
+    const labor = data.labores[0];
+
+    // Campos generales
+    if (labor.fecha) document.getElementById('fecha').value = labor.fecha;
+    if (labor.operador) document.getElementById('operador').value = labor.operador;
+    if (labor.observaciones) document.getElementById('observaciones').value = labor.observaciones;
+
+    // Tipo de labor
+    if (labor.tipo) {
+      document.getElementById('tipo').value = labor.tipo;
+      onTipoChange();
+    }
+
+    // Tipo de aplicación (si aplica)
+    const detalle0 = (labor.lotes && labor.lotes[0] && labor.lotes[0].detalle) || {};
+    if (detalle0.tipoAplicacion) {
+      const taSel = document.getElementById('tipoAplicacion');
+      if (taSel) taSel.value = detalle0.tipoAplicacion;
+    }
+
+    // Cliente
+    if (labor.cliente) {
+      document.getElementById('cliente').value = labor.cliente;
+      onClienteChange(); // resetea filas y popula campos dropdown
+    }
+
+    // Campo principal (primer lote o campo general)
+    const primerCampo = (labor.lotes && labor.lotes[0] && labor.lotes[0].campo) || labor.campo || '';
+    if (primerCampo) document.getElementById('campo').value = primerCampo;
+
+    // Reconstruir filas desde los lotes de la labor guardada
+    filas = [];
+    filaCounter = 0;
+    (labor.lotes || []).forEach(l => {
+      filaCounter++;
+      const prods = (l.productos && l.productos.length)
+        ? l.productos.map(p => ({ nombre: p.nombre, dosis: p.dosis, unidad: p.unidad }))
+        : [{ nombre: '', dosis: '', unidad: 'L/ha' }];
+      filas.push({
+        id: 'f' + filaCounter,
+        campo: l.campo || primerCampo,
+        lote: l.lote,
+        cultivoActual: l.cultivo,
+        ha: l.ha,
+        productos: prods,
+        detalle: l.detalle || {}
+      });
+    });
+
+    envaseSize = {};
+    acceptedTotals = {};
+    retiros = {};
+    renderLotes();
+    renderResumenProductos();
+
+    msg.textContent = '✅ OT ' + otBuscada + ' cargada — modificá lo que necesites y confirmá para guardar.';
+    msg.className = 'msg ok';
+  } catch (err) {
+    msg.textContent = '⚠️ Error buscando OT: ' + err.message;
+    msg.className = 'msg err';
+  }
+}
+
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
 // ── OT: ORDEN DE TRABAJO ──────────────────────────────────────
