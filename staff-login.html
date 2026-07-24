@@ -52,6 +52,19 @@
   .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .msg { margin-top: 14px; font-size: 0.85rem; font-weight: 600; text-align: center; }
   .msg.err { color: #c0392b; }
+  .recuperar {
+    margin-top: 16px; text-align: center; font-size: 0.82rem; color: #5d6d7e;
+  }
+  .recuperar a {
+    color: #4a8c3a; text-decoration: none; font-weight: 600; cursor: pointer;
+  }
+  .recuperar a:hover { text-decoration: underline; }
+  .recuperar-info {
+    display: none; margin-top: 12px; background: #f4f7f1; border-radius: 8px;
+    padding: 12px 14px; font-size: 0.83rem; color: #1e2b1a; line-height: 1.5;
+    border-left: 3px solid #4a8c3a;
+  }
+  .recuperar-info.visible { display: block; }
 </style>
 </head>
 <body>
@@ -87,6 +100,14 @@
     </div>
     <button class="btn" id="btnLogin" onclick="login()">Ingresar</button>
     <div class="msg" id="msg"></div>
+    <div class="recuperar">
+      <a onclick="toggleRecuperar()">¿Olvidaste tu contraseña?</a>
+      <div class="recuperar-info" id="recuperarInfo">
+        Para restablecer tu contraseña, contactá al encargado o a <strong>Agro Raimondi</strong>:<br>
+        📧 <a href="mailto:raimondifran@gmail.com">raimondifran@gmail.com</a><br>
+        El administrador va a reiniciar tu acceso.
+      </div>
+    </div>
   </div>
 
 <script>
@@ -154,8 +175,7 @@ async function login() {
     localStorage.setItem('staffToken', data.token);
     localStorage.setItem('staffUsuario', data.usuario);
     localStorage.setItem('staffRol', data.rol);
-    localStorage.setItem('staffCamposPermitidos', JSON.stringify(data.camposPermitidos || []));
-    window.location.href = 'staff-home.html';
+    window.location.href = 'planilla-labores.html';
   } catch (err) {
     msg.textContent = '⚠️ ' + err.message;
     msg.className = 'msg err';
@@ -163,6 +183,10 @@ async function login() {
   }
 }
 document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+function toggleRecuperar() {
+  const el = document.getElementById('recuperarInfo');
+  el.classList.toggle('visible');
+}
 </script>
 </body>
 </html>
