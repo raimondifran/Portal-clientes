@@ -1145,7 +1145,8 @@ async function confirmar() {
     // Guardar labor (autenticado — "cargado por" lo determina el backend por sesión)
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
-      planilla: (ot ? ot + ' — ' : '') + cliente + ' - ' + campoLabel,
+      planilla: cliente + ' - ' + campoLabel,
+      ot: ot,
       cliente, campo: campoLabel,
       lotes: lotesPayload
     });
