@@ -160,7 +160,17 @@
 
   <div class="card">
     <div class="card-title">📋 Datos generales</div>
-    <div class="form-row">
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group" style="max-width:200px;">
+        <label>N° Orden de Trabajo</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" id="ot" placeholder="240720261" style="flex:1;font-weight:700;font-size:1rem;color:#1a5276;">
+          <button type="button" onclick="sugerirOT()" title="Generar número automático"
+            style="padding:9px 10px;border:1.5px solid #d5d8dc;border-radius:8px;background:#f4f7f1;cursor:pointer;font-size:0.85rem;">🔄</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:8px;">
       <div class="form-group">
         <label>Cliente</label>
         <select id="cliente" onchange="onClienteChange()"><option value="">Seleccionar…</option></select>
@@ -185,7 +195,7 @@
     <div class="form-row">
       <div class="form-group">
         <label>Fecha</label>
-        <input type="date" id="fecha">
+        <input type="date" id="fecha" onchange="sugerirOT()">
       </div>
       <div class="form-group" id="grupoTipoAplicacion" style="display:none;">
         <label>Tipo de aplicación</label>
@@ -853,6 +863,7 @@ async function confirmar() {
   const operador = document.getElementById('operador').value;
   const observaciones = document.getElementById('observaciones').value;
   const tipoAplicacion = document.getElementById('tipoAplicacion') ? document.getElementById('tipoAplicacion').value : '';
+  const ot = document.getElementById('ot').value.trim();
 
   if (!cliente || !tipo || !fecha) {
     msg.textContent = '⚠️ Completá cliente, tipo de labor y fecha.';
@@ -920,7 +931,7 @@ async function confirmar() {
       doc.text('Planilla de Labores', marginL, 11);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      const meta = [cliente, campoLabel, tipo, fechaFmt, operador].filter(Boolean).join('  |  ');
+      const meta = [ot || null, cliente, campoLabel, tipo, fechaFmt, operador].filter(Boolean).join('  |  ');
       doc.text(meta, marginL, 19);
       doc.setTextColor(0, 0, 0);
     }
@@ -1128,13 +1139,13 @@ async function confirmar() {
       drawPageFooter(i, totalPages);
     }
 
-    const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
+    const nombreArchivo = `${ot ? ot + '_' : ''}${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
     doc.save(nombreArchivo);
 
     // Guardar labor (autenticado — "cargado por" lo determina el backend por sesión)
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
-      planilla: cliente + ' - ' + campoLabel,
+      planilla: (ot ? ot + ' — ' : '') + cliente + ' - ' + campoLabel,
       cliente, campo: campoLabel,
       lotes: lotesPayload
     });
@@ -1175,7 +1186,21 @@ async function confirmar() {
 
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
+// ── OT: ORDEN DE TRABAJO ──────────────────────────────────────
+function sugerirOT() {
+  const fechaVal = document.getElementById('fecha').value || new Date().toISOString().split('T')[0];
+  const [anio, mes, dia] = fechaVal.split('-');
+  const fechaStr = dia + mes + anio; // formato ddmmyyyy
+  const storageKey = 'ot_counter_' + fechaStr;
+  let contador = parseInt(localStorage.getItem(storageKey) || '0', 10) + 1;
+  const otSugerida = fechaStr + contador; // ej: 240720261
+  document.getElementById('ot').value = otSugerida;
+  localStorage.setItem(storageKey, contador);
+}
+
 cargarMaestro();
+// Sugerir OT al cargar la página
+sugerirOT();
 </script>
 </body>
 </html>
