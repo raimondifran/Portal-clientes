@@ -138,14 +138,6 @@
     font-size: 0.82rem; font-weight: 700; background: #1a5276; color: #fff;
   }
   .btn-opcion:disabled { background: #d6eaf8; color: #1a5276; cursor: default; }
-  .ot-badge { background:#d6eaf8; color:#1a5276; border-radius:6px; padding:3px 10px; font-size:0.8rem; font-weight:700; margin-left:8px; }
-  .ot-editando-badge { background:#fdebd0; color:#9a3412; border-radius:6px; padding:3px 10px; font-size:0.78rem; font-weight:700; }
-  #otSelectorPanel { border:2px solid #2e86c1; border-radius:12px; padding:16px; margin-bottom:16px; background:#f8fbff; }
-  .ot-lista { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; margin-top:10px; }
-  .ot-item { display:flex; align-items:center; gap:10px; padding:8px 12px; background:white; border:1.5px solid #d5d8dc; border-radius:8px; cursor:pointer; font-size:0.87rem; transition:border-color 0.15s; }
-  .ot-item:hover { border-color:#2e86c1; background:#eaf4fb; }
-  .ot-item .ot-num { font-weight:700; color:#1a5276; min-width:110px; }
-  .ot-item .ot-meta { color:#5d6d7e; flex:1; }
 </style>
 </head>
 <body>
@@ -168,26 +160,6 @@
 
   <div class="card">
     <div class="card-title">📋 Datos generales</div>
-    <!-- Fila OT -->
-    <div class="form-row" style="align-items:flex-end;">
-      <div class="form-group" style="flex:0 0 auto;min-width:200px;">
-        <label>N° de Orden de Trabajo</label>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="text" id="nroOT"
-            style="font-weight:700;color:#1a5276;font-size:1rem;width:160px;"
-            placeholder="Cargando…"
-            onblur="onOTChange()"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();onOTChange();}">
-          <span id="otEditandoBadge" class="ot-editando-badge" style="display:none;">✏️ Editando</span>
-          <span id="otNuevaBadge" style="display:none;background:#eafaf1;color:#1e8449;border-radius:6px;padding:3px 10px;font-size:0.78rem;font-weight:700;">🆕 Nueva</span>
-        </div>
-        <div style="font-size:0.75rem;color:#5d6d7e;margin-top:3px;">Escribí un número existente para cargar esa OT</div>
-      </div>
-      <div class="form-group" style="flex:0 0 auto;" id="btnNuevaOTWrapper" style="display:none;">
-        <label>&nbsp;</label>
-        <button class="btn" style="background:#eef4fa;color:#c0392b;border:1.5px solid #fad7d7;width:auto;padding:9px 14px;font-size:0.85rem;" onclick="nuevaOT()">🆕 Nueva OT</button>
-      </div>
-    </div>
     <div class="form-row">
       <div class="form-group">
         <label>Cliente</label>
@@ -259,8 +231,6 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MX
 const staffToken = localStorage.getItem('staffToken');
 const staffUsuario = localStorage.getItem('staffUsuario');
 const staffRol = localStorage.getItem('staffRol');
-let staffCamposPermitidos = [];
-try { staffCamposPermitidos = JSON.parse(localStorage.getItem('staffCamposPermitidos') || '[]'); } catch(e) { staffCamposPermitidos = []; }
 if (!staffToken || !staffUsuario || staffRol !== 'operador') {
   window.location.href = 'staff-login.html';
 }
@@ -268,7 +238,6 @@ function cerrarSesionStaff() {
   localStorage.removeItem('staffToken');
   localStorage.removeItem('staffUsuario');
   localStorage.removeItem('staffRol');
-  localStorage.removeItem('staffCamposPermitidos');
   window.location.href = 'staff-login.html';
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -309,88 +278,6 @@ let jsonpCounter = 0;
 let envaseSize = {};      // { key: number } tamaño de envase por producto
 let acceptedTotals = {};  // { key: number } total ya aceptado (redondeado)
 let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira cada producto
-let laborIdEditando = null; // si se está editando una OT existente
-
-// ── ÓRDENES DE TRABAJO ────────────────────────────────────────
-let otsCargadas = []; // cache de OTs existentes
-
-async function cargarSiguienteOT() {
-  try {
-    const fecha = document.getElementById('fecha').value;
-    const url = SHEETS_URL + '?action=siguienteOT' + (fecha ? '&fecha=' + encodeURIComponent(fecha) : '');
-    const data = await jsonp(url);
-    if (data.ok) {
-      document.getElementById('nroOT').value = data.ot;
-      document.getElementById('otNuevaBadge').style.display = 'inline';
-    }
-  } catch(e) { /* silencioso */ }
-}
-
-async function cargarListaOTs() {
-  try {
-    const data = await jsonp(SHEETS_URL + '?action=listarOTs');
-    if (data.ok) otsCargadas = data.ots;
-  } catch(e) { /* silencioso */ }
-}
-
-async function onOTChange() {
-  const valor = document.getElementById('nroOT').value.trim();
-  if (!valor) return;
-  const encontrada = otsCargadas.find(o => o.ot === valor);
-  if (!encontrada) return; // número nuevo, no hacer nada
-  await cargarOTEnFormulario(encontrada.laborId, valor);
-}
-
-async function cargarOTEnFormulario(laborId, nroOT) {
-  try {
-    const data = await jsonp(SHEETS_URL + '?action=cargarOT&token=' + encodeURIComponent(staffToken) + '&laborId=' + encodeURIComponent(laborId));
-    if (!data.ok) throw new Error(data.error);
-    const labor = data.labor;
-
-    document.getElementById('cliente').value = labor.cliente;
-    onClienteChange();
-    await new Promise(r => setTimeout(r, 0));
-    const primerCampo = labor.lotes && labor.lotes[0] ? labor.lotes[0].campo : '';
-    if (primerCampo) document.getElementById('campo').value = primerCampo;
-    document.getElementById('tipo').value = labor.tipo;
-    onTipoChange();
-    if (labor.fecha) document.getElementById('fecha').value = String(labor.fecha).split('T')[0];
-    if (labor.operador) document.getElementById('operador').value = labor.operador;
-    if (labor.observaciones) document.getElementById('observaciones').value = labor.observaciones;
-    document.getElementById('nroOT').value = nroOT || labor.ot || '';
-    laborIdEditando = laborId;
-
-    filas = [];
-    filaCounter = 0;
-    (labor.lotes || []).forEach(lote => {
-      filaCounter++;
-      const prods = lote.productos && lote.productos.length
-        ? lote.productos.map(p => ({ nombre: p.nombre || '', dosis: p.dosis || '', unidad: p.unidad || 'L/ha' }))
-        : [{ nombre: '', dosis: '', unidad: 'L/ha' }];
-      filas.push({ id: 'f' + filaCounter, campo: lote.campo || primerCampo, lote: lote.lote, cultivoActual: lote.cultivo, ha: lote.ha, productos: prods, detalle: lote.detalle || {} });
-    });
-
-    document.getElementById('otEditandoBadge').style.display = 'inline';
-    document.getElementById('otNuevaBadge').style.display = 'none';
-    document.getElementById('btnNuevaOTWrapper').style.display = 'block';
-    renderLotes();
-    renderResumenProductos();
-  } catch(e) {
-    alert('⚠️ No se pudo cargar la OT: ' + e.message);
-  }
-}
-
-function nuevaOT() {
-  laborIdEditando = null;
-  document.getElementById('otEditandoBadge').style.display = 'none';
-  document.getElementById('btnNuevaOTWrapper').style.display = 'none';
-  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-  cargarSiguienteOT();
-  document.getElementById('cliente').value = '';
-  onClienteChange();
-  document.getElementById('tipo').value = '';
-  document.getElementById('observaciones').value = '';
-}
 
 function jsonpScript(url) {
   return new Promise((resolve, reject) => {
@@ -487,15 +374,6 @@ async function cargarMaestro() {
   try {
     const data = await jsonp(SHEETS_URL + '?action=maestro');
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    // Filtrar por campos permitidos si el operador tiene restricciones
-    if (staffCamposPermitidos && staffCamposPermitidos.length > 0) {
-      data.clientes = data.clientes.map(c => {
-        const camposFiltrados = c.campos.filter(cp =>
-          staffCamposPermitidos.some(p => p.cliente === c.cliente && p.campo === cp.campo)
-        );
-        return { ...c, campos: camposFiltrados };
-      }).filter(c => c.campos.length > 0);
-    }
     maestro = data;
     const sel = document.getElementById('cliente');
     sel.innerHTML = '<option value="">Seleccionar…</option>' +
@@ -929,22 +807,10 @@ function aceptarAjuste(k, newTotal) {
   const prod = mapa[k];
   if (!prod || !newTotal || prod.total <= 0) return;
   acceptedTotals[k] = newTotal;
-  // Sincronizar retiro si hay una sola entrada sin depósito completado
-  if (!retiros[k] || retiros[k].length === 0) {
-    retiros[k] = [{ deposito: '', cantidad: newTotal }];
-  } else if (retiros[k].length === 1 && !retiros[k][0].deposito) {
-    retiros[k][0].cantidad = newTotal;
-  }
   renderResumenProductos();
 }
 
 function deshacerAjuste(k) {
-  // Revertir cantidad del retiro si es una sola entrada sin depósito
-  const mapa = calcularMapaProductos();
-  const prod = mapa[k];
-  if (retiros[k] && retiros[k].length === 1 && !retiros[k][0].deposito && prod) {
-    retiros[k][0].cantidad = Math.round(prod.total * 100) / 100;
-  }
   delete acceptedTotals[k];
   renderResumenProductos();
 }
@@ -1178,6 +1044,58 @@ async function confirmar() {
         tableLineWidth: 0.2,
       });
       y = doc.lastAutoTable.finalY + 9;
+
+      // ── SECCIÓN: RESUMEN PARA PROGRAMAS DE GESTIÓN (por producto, campo y cultivo)
+      if (y > 220) { doc.addPage(); drawPageHeader(); y = 40; }
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('RESUMEN PARA PROGRAMAS DE GESTIÓN', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const pgRows = [];
+      clavesProd.forEach(k => {
+        const prod = mapaOriginal[k];
+        const factor = calcularFactor(k, mapaOriginal);
+        const unidS = prod.unidad.split('/')[0];
+        // Agrupar lotes por campo + cultivo
+        const grupos = {};
+        const ordenGrupos = [];
+        prod.lotes.forEach(l => {
+          const gKey = l.campo + '|||' + l.cultivo;
+          if (!grupos[gKey]) {
+            grupos[gKey] = { campo: l.campo, cultivo: l.cultivo, ha: 0, total: 0 };
+            ordenGrupos.push(gKey);
+          }
+          grupos[gKey].ha += parseFloat(l.ha || 0);
+          grupos[gKey].total += l.subtotal * factor;
+        });
+        ordenGrupos.forEach(gKey => {
+          const g = grupos[gKey];
+          pgRows.push([prod.nombre, prod.unidad, g.campo, g.cultivo, g.ha.toFixed(2), g.total.toFixed(2) + ' ' + unidS]);
+        });
+      });
+
+      doc.autoTable({
+        head: [['Producto', 'Unidad', 'Campo', 'Cultivo', 'Ha', 'Cantidad']],
+        body: pgRows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 8.5, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 } },
+        headStyles: { fillColor: VERDE, textColor: BLANCO, fontStyle: 'bold', fontSize: 8 },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          4: { halign: 'right' },
+          5: { halign: 'right', fontStyle: 'bold', textColor: VERDE }
+        },
+        alternateRowStyles: { fillColor: [248, 251, 248] },
+        theme: 'plain',
+        tableLineColor: [220, 220, 220],
+        tableLineWidth: 0.2,
+      });
+      y = doc.lastAutoTable.finalY + 9;
+
     } else {
       // Tipos sin productos (Siembra / Cosecha / Disco / Cultivador): detalle simple por lote
       doc.setFillColor(...GRIS);
@@ -1210,18 +1128,15 @@ async function confirmar() {
       drawPageFooter(i, totalPages);
     }
 
-    const nroOT = document.getElementById('nroOT').value || '';
-    const nombreArchivo = `OT${nroOT}_${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
+    const nombreArchivo = `${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
     doc.save(nombreArchivo);
 
     // Guardar labor (autenticado — "cargado por" lo determina el backend por sesión)
     const payload = JSON.stringify({
       fecha, tipo, operador, observaciones,
       planilla: cliente + ' - ' + campoLabel,
-      ot: nroOT,
       cliente, campo: campoLabel,
-      lotes: lotesPayload,
-      ...(laborIdEditando ? { laborId: laborIdEditando } : {})
+      lotes: lotesPayload
     });
     const guardarUrl = SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
     const resGuardar = await jsonp(guardarUrl);
@@ -1248,12 +1163,6 @@ async function confirmar() {
     envaseSize = {};
     acceptedTotals = {};
     retiros = {};
-    laborIdEditando = null;
-    document.getElementById('otEditandoBadge').style.display = 'none';
-    document.getElementById('otNuevaBadge').style.display = 'inline';
-    document.getElementById('btnNuevaOTWrapper').style.display = 'none';
-    cargarSiguienteOT();
-    cargarListaOTs(); // refrescar la lista para incluir la OT recién guardada
     renderLotes();
     renderResumenProductos();
   } catch (err) {
@@ -1267,8 +1176,6 @@ async function confirmar() {
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 
 cargarMaestro();
-cargarSiguienteOT();
-cargarListaOTs();
 </script>
 </body>
 </html>
