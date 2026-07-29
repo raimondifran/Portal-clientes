@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planilla de Labores</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, #1a5276, #2e86c1);
+    color: white; padding: 18px 30px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  header .logo { font-size: 2rem; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+  .container { max-width: 1100px; margin: 28px auto; padding: 0 18px; }
+  .card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 22px 24px; margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 1rem; font-weight: 700; color: #1a5276;
+    margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #d6eaf8;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .form-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .form-group { flex: 1; min-width: 160px; }
+  .form-group label {
+    display: block; font-size: 0.78rem; font-weight: 600; color: #5d6d7e;
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px;
+  }
+  .form-group input, .form-group select {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #d5d8dc; border-radius: 8px;
+    font-size: 0.93rem; color: #1a202c; background: #fff;
+  }
+  .campo-group { margin-bottom: 18px; }
+  .campo-group-title {
+    font-size: 0.85rem; font-weight: 700; color: #2e86c1;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .lotes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .lote-card {
+    border: 2px solid #d5d8dc; border-radius: 10px;
+    padding: 10px 12px; cursor: pointer; position: relative;
+    transition: all 0.18s; background: #fafcfe; user-select: none;
+  }
+  .lote-card:hover { border-color: #2e86c1; background: #eaf4fb; }
+  .lote-card.en-orden { border-color: #1a5276; background: #d6eaf8; }
+  .lote-card .lote-name { font-weight: 700; font-size: 0.95rem; color: #1a5276; }
+  .lote-card .lote-ha { font-weight: 600; color: #27ae60; font-size: 0.82rem; margin-top: 2px; }
+  .lote-card .cultivo-badge {
+    display: inline-block; background: #eafaf1; color: #1e8449;
+    border-radius: 4px; padding: 1px 6px; font-size: 0.72rem;
+    font-weight: 700; margin-top: 4px; text-transform: uppercase;
+  }
+  .lote-count-badge {
+    position: absolute; top: -8px; right: -8px; background: #1a5276; color: white;
+    border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center;
+    justify-content: center; font-size: 0.72rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  .lotes-detalle-lista { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
+  .lote-bloque { border: 2px solid #aed6f1; border-radius: 12px; overflow: hidden; }
+  .lote-bloque-header {
+    background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
+    padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  }
+  .lote-bloque-title { font-weight: 700; font-size: 1rem; }
+  .lote-bloque-meta { font-size: 0.82rem; opacity: 0.95; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .ha-input {
+    width: 70px; padding: 4px 6px; border: none; border-radius: 5px; font-size: 0.85rem;
+    color: #1a202c; background: rgba(255,255,255,0.9);
+  }
+  .btn-quitar-fila {
+    background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4); color: white;
+    border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  }
+  .lote-bloque-body { padding: 14px 16px; }
+  .prod-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .prod-row input, .prod-row select { padding: 7px 10px; border: 1.5px solid #d5d8dc; border-radius: 7px; font-size: 0.88rem; }
+  .prod-row .p-nombre { flex: 2; }
+  .prod-row .p-dosis { flex: 1; }
+  .prod-row .p-unidad { flex: 1; }
+  .prod-row .p-del { background: #fdecea; color: #c0392b; border: none; border-radius: 6px; padding: 7px 10px; cursor: pointer; font-weight: 700; }
+  .btn-add-prod {
+    background: #eef4fa; color: #1a5276; border: 1.5px solid #d6eaf8; border-radius: 7px;
+    padding: 6px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  }
+  .campos-tipo { display: flex; gap: 10px; flex-wrap: wrap; }
+  .campos-tipo .form-group { min-width: 140px; flex: 1; }
+  .btn {
+    background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
+    border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem;
+    font-weight: 700; cursor: pointer;
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-confirmar {
+    padding: 13px 32px; font-size: 1.05rem; width: 100%; letter-spacing: 0.02em;
+  }
+  .empty { text-align: center; padding: 20px; color: #5d6d7e; font-size: 0.9rem; }
+  .msg { margin-top: 12px; font-size: 0.85rem; font-weight: 600; text-align: center; }
+  .msg.ok { color: #27ae60; }
+  .msg.err { color: #c0392b; }
+
+  /* Resumen / redondeo por bidón */
+  .resumen-prod-block { border: 1.5px solid #d5d8dc; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .resumen-prod-titulo { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-weight: 700; color: #1a5276; }
+  .resumen-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin-bottom: 10px; }
+  .resumen-table th, .resumen-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #eef1f4; }
+  .resumen-table th { color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: 0.68rem; }
+  .resumen-table .num { text-align: right; }
+  .resumen-table .total-row td { font-weight: 700; border-top: 2px solid #d6eaf8; }
+  .envase-box { background: #f8fafc; border-radius: 8px; padding: 12px; }
+  .envase-top-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .envase-label { font-size: 0.81rem; font-weight: 600; color: #5d6d7e; white-space: nowrap; }
+  .envase-input { width: 80px; padding: 6px 8px; border: 1.5px solid #d5d8dc; border-radius: 7px; font-size: 0.88rem; }
+  .total-actual-chip { margin-left: auto; background: #d6eaf8; color: #1a5276; border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; }
+  .opciones-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .opcion-envase { flex: 1; min-width: 200px; background: #fff; border: 1.5px solid #d5d8dc; border-radius: 8px; padding: 10px 12px; }
+  .opcion-envase.opcion-exact { border-color: #27ae60; }
+  .opcion-header { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
+  .opcion-num { font-size: 0.85rem; margin-bottom: 4px; }
+  .opcion-pct { font-size: 0.78rem; color: #5d6d7e; margin-bottom: 8px; }
+  .pct-exact { color: #27ae60; }
+  .pct-up { color: #c0392b; }
+  .pct-down { color: #d68910; }
+  .btn-opcion {
+    width: 100%; padding: 7px; border-radius: 7px; border: none; cursor: pointer;
+    font-size: 0.82rem; font-weight: 700; background: #1a5276; color: #fff;
+  }
+  .btn-opcion:disabled { background: #d6eaf8; color: #1a5276; cursor: default; }
+</style>
+</head>
+<body>
+
+<header style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="logo">🌱</div>
+    <div>
+      <h1>Planilla de Labores</h1>
+      <p>Carga unificada — todos los clientes y campos</p>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px; font-size:0.85rem;">
+    <span>👤 Conectado como <strong id="staffUsuarioLabel"></strong></span>
+    <button onclick="cerrarSesionStaff()" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.4); color:white; border-radius:6px; padding:6px 12px; font-size:0.8rem; cursor:pointer;">Cerrar sesión</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">📋 Datos generales</div>
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group" style="max-width:200px;">
+        <label>N° Orden de Trabajo</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="text" id="ot" placeholder="240720261" style="flex:1;font-weight:700;font-size:1rem;color:#1a5276;">
+          <button type="button" onclick="sugerirOT()" title="Generar número automático"
+            style="padding:9px 10px;border:1.5px solid #d5d8dc;border-radius:8px;background:#f4f7f1;cursor:pointer;font-size:0.85rem;">🔄</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:8px;">
+      <div class="form-group">
+        <label>Cliente</label>
+        <select id="cliente" onchange="onClienteChange()"><option value="">Seleccionar…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Campo</label>
+        <select id="campo" onchange="onCampoChange()"><option value="">Seleccionar…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Tipo de labor</label>
+        <select id="tipo" onchange="onTipoChange()">
+          <option value="">Seleccionar…</option>
+          <option>Fumigada</option>
+          <option>Fertilización</option>
+          <option>Siembra</option>
+          <option>Cosecha</option>
+          <option>Disco</option>
+          <option>Cultivador</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="fecha" onchange="sugerirOT()">
+      </div>
+      <div class="form-group" id="grupoTipoAplicacion" style="display:none;">
+        <label>Tipo de aplicación</label>
+        <select id="tipoAplicacion">
+          <option>TERRESTRE</option>
+          <option>AVIÓN</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Operador / Empresa</label>
+        <input type="text" id="operador" placeholder="Nombre del operador">
+      </div>
+      <div class="form-group">
+        <label>Observaciones</label>
+        <input type="text" id="observaciones" placeholder="Notas adicionales">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🌾 Lotes trabajados <span style="font-weight:400;font-size:0.8rem;color:#5d6d7e;">(click para agregar a la orden · doble click para agregarlo dos veces, por ejemplo cuando la cabecera va aparte · cambiá de campo arriba para seguir sumando lotes de otros campos)</span></div>
+    <div id="lotesContainer"><div class="empty">Elegí cliente, campo y tipo de labor para ver los lotes.</div></div>
+    <div class="lotes-detalle-lista" id="lotesDetalleLista"></div>
+  </div>
+
+  <div class="card" id="cardResumen" style="display:none;">
+    <div class="card-title">🧪 Resumen por producto — ajuste por bidón</div>
+    <div id="resumenContainer"></div>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-confirmar" id="btnConfirmar" onclick="confirmar()">✅ Confirmar y guardar PDF</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+</div>
+
+<script>
+// ⚠️ Misma URL que en las demás apps del sistema
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
+
+// ── AUTENTICACIÓN DE OPERADOR ─────────────────────────────────
+const staffToken = localStorage.getItem('staffToken');
+const staffUsuario = localStorage.getItem('staffUsuario');
+const staffRol = localStorage.getItem('staffRol');
+if (!staffToken || !staffUsuario || staffRol !== 'operador') {
+  window.location.href = 'staff-login.html';
+}
+function cerrarSesionStaff() {
+  localStorage.removeItem('staffToken');
+  localStorage.removeItem('staffUsuario');
+  localStorage.removeItem('staffRol');
+  window.location.href = 'staff-login.html';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const lbl = document.getElementById('staffUsuarioLabel');
+  if (lbl) lbl.textContent = staffUsuario || '';
+});
+
+const UNIDADES_PRODUCTO = ['L/ha','kg/ha','cc/ha','g/ha'];
+
+const CAMPOS_POR_TIPO = {
+  'Fumigada':       { modo: 'productos', tipoAplicacion: true },
+  'Fertilización':  { modo: 'productos', tipoAplicacion: true },
+  'Siembra':        { modo: 'campos', campos: [
+    { key: 'cultivoNuevo', label: 'Cultivo sembrado', type: 'text' },
+    { key: 'variedad',     label: 'Variedad', type: 'text' },
+    { key: 'densidad',     label: 'Densidad', type: 'number' },
+    { key: 'unidadDensidad', label: 'Unidad', type: 'select', options: ['kg/ha','pl/ha','semillas/ha'] }
+  ]},
+  'Cosecha':        { modo: 'campos', campos: [
+    { key: 'rendimiento', label: 'Rendimiento', type: 'number' },
+    { key: 'unidadRendimiento', label: 'Unidad', type: 'select', options: ['kg/ha','qq/ha'] },
+    { key: 'humedad', label: 'Humedad %', type: 'number' }
+  ]},
+  'Disco':          { modo: 'campos', campos: [
+    { key: 'profundidad', label: 'Profundidad (cm)', type: 'number' },
+    { key: 'implemento', label: 'Implemento', type: 'text' }
+  ]},
+  'Cultivador':     { modo: 'campos', campos: [
+    { key: 'profundidad', label: 'Profundidad (cm)', type: 'number' },
+    { key: 'implemento', label: 'Implemento', type: 'text' }
+  ]}
+};
+
+let maestro = { clientes: [] };
+let filas = [];        // [{ id, campo, lote, cultivoActual, ha, productos:[], detalle:{} }] — en orden de agregado
+let filaCounter = 0;
+let jsonpCounter = 0;
+let envaseSize = {};      // { key: number } tamaño de envase por producto
+let acceptedTotals = {};  // { key: number } total ya aceptado (redondeado)
+let retiros = {};         // { key: [{deposito, cantidad}] } de dónde se retira cada producto
+let otEnEdicion = null;   // null = OT nueva; string = OT existente que se está editando
+
+function jsonpScript(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + (jsonpCounter++);
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('Tiempo de espera agotado')); }, 15000);
+    function cleanup() { clearTimeout(timeout); delete window[callbackName]; script.remove(); }
+    window[callbackName] = (data) => { cleanup(); resolve(data); };
+    script.onerror = () => { cleanup(); reject(new Error('No se pudo conectar (script)')); };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + callbackName;
+    document.body.appendChild(script);
+  });
+}
+
+async function jsonpFetch(url) {
+  const res = await fetch(url, { method: 'GET' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function jsonp(url) {
+  try {
+    return await jsonpFetch(url);
+  } catch (errFetch) {
+    try {
+      return await jsonpScript(url);
+    } catch (errScript) {
+      throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
+    }
+  }
+}
+
+function guardarSilencioso(url) {
+  new Image().src = url; // GET silencioso, no necesita CORS
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+// Genera el logo AgroRaimondi como imagen PNG (para insertar en el PDF).
+function getLogoDataUrl() {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="300" height="130" viewBox="0 0 300 130">
+      <rect x="0" y="0" width="300" height="130" rx="14" fill="white"/>
+      <text x="20" y="34" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="600" fill="#C9A200" letter-spacing="5">AGRO</text>
+      <text x="20" y="75" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="600" fill="#367C2B" letter-spacing="1">RAIMONDI</text>
+      <g transform="translate(205,49)" fill="none" stroke="#367C2B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="25" x2="12" y2="5"/>
+        <path d="M12 7 C11 5 9 4 7 5 C7 7 9 9 11 9 C12 9 12 8 12 7"/>
+        <path d="M12 7 C13 5 15 4 17 5 C17 7 15 9 13 9 C12 9 12 8 12 7"/>
+        <path d="M12 13 C11 11 9 10 7 11 C7 13 9 15 11 15 C12 15 12 14 12 13"/>
+        <path d="M12 13 C13 11 15 10 17 11 C17 13 15 15 13 15 C12 15 12 14 12 13"/>
+        <path d="M12 19 C11 17 9 16 7 17 C7 19 9 21 11 21 C12 21 12 20 12 19"/>
+        <path d="M12 19 C13 17 15 16 17 17 C17 19 15 21 13 21 C12 21 12 20 12 19"/>
+      </g>
+      <line x1="20" y1="90" x2="255" y2="90" stroke="rgba(54,124,43,0.3)" stroke-width="1"/>
+      <text x="20" y="107" font-family="Arial, Helvetica, sans-serif" font-size="10.5" fill="#4A8C3A" letter-spacing="1.8">ASESORAMIENTO AGROPECUARIO</text>
+    </svg>
+  `;
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = 3;
+      const canvas = document.createElement('canvas');
+      canvas.width = 300 * scale;
+      canvas.height = 130 * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, 300, 130);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+  });
+}
+
+function getClienteActual() {
+  const cliente = document.getElementById('cliente').value;
+  return maestro.clientes.find(x => x.cliente === cliente);
+}
+
+function campoActual() {
+  const c = getClienteActual();
+  const campo = document.getElementById('campo').value;
+  return c && c.campos.find(x => x.campo === campo);
+}
+
+function getFila(id) { return filas.find(f => f.id === id); }
+
+async function cargarMaestro() {
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=maestro');
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    maestro = data;
+    const sel = document.getElementById('cliente');
+    sel.innerHTML = '<option value="">Seleccionar…</option>' +
+      maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
+  } catch (err) {
+    document.getElementById('lotesContainer').innerHTML = '<div class="empty">⚠️ No se pudo cargar la lista de clientes: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function onClienteChange() {
+  const c = getClienteActual();
+  const campoSel = document.getElementById('campo');
+  campoSel.innerHTML = '<option value="">Seleccionar…</option>' +
+    (c ? c.campos.map(cp => `<option value="${escapeHtml(cp.campo)}">${escapeHtml(cp.campo)}</option>`).join('') : '');
+  filas = [];
+  envaseSize = {};
+  acceptedTotals = {};
+  retiros = {};
+  renderLotes();
+  renderResumenProductos();
+}
+
+function onCampoChange() {
+  // OJO: acá NO se resetea `filas` — así se pueden ir sumando lotes
+  // de distintos campos del mismo cliente a la misma orden de trabajo.
+  renderLotes();
+}
+
+function onTipoChange() {
+  const tipo = document.getElementById('tipo').value;
+  const conf = CAMPOS_POR_TIPO[tipo];
+  document.getElementById('grupoTipoAplicacion').style.display = (conf && conf.tipoAplicacion) ? 'block' : 'none';
+  filas = [];
+  envaseSize = {};
+  acceptedTotals = {};
+  retiros = {};
+  renderLotes();
+  renderResumenProductos();
+}
+
+function contarInstancias(campo, lote) {
+  return filas.filter(f => f.campo === campo && f.lote === lote).length;
+}
+
+function renderLotes() {
+  const cont = document.getElementById('lotesContainer');
+  const cp = campoActual();
+  const tipo = document.getElementById('tipo').value;
+
+  if (!cp || !tipo) {
+    cont.innerHTML = '<div class="empty">Elegí cliente, campo y tipo de labor para ver los lotes.</div>';
+    renderLotesDetalleLista();
+    return;
+  }
+  if (!cp.lotes.length) {
+    cont.innerHTML = '<div class="empty">Este campo todavía no tiene lotes cargados. Agregalos desde "Gestionar Campos y Rotación".</div>';
+    renderLotesDetalleLista();
+    return;
+  }
+
+  cont.innerHTML = `
+    <div class="campo-group">
+      <div class="campo-group-title">🌾 ${escapeHtml(cp.campo)}</div>
+      <div class="lotes-grid">
+        ${cp.lotes.map(l => {
+          const loteStr = String(l.lote);
+          const n = contarInstancias(cp.campo, loteStr);
+          return `
+            <div class="lote-card${n > 0 ? ' en-orden' : ''}" data-campo="${escapeHtml(cp.campo)}" data-lote="${escapeHtml(loteStr)}">
+              ${n > 0 ? `<div class="lote-count-badge">${n}</div>` : ''}
+              <div class="lote-name">${escapeHtml(loteStr)}</div>
+              <div class="lote-ha">${escapeHtml(l.ha)} ha</div>
+              <div><span class="cultivo-badge">${escapeHtml(l.cultivo)}</span></div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  renderLotesDetalleLista();
+}
+
+// Delegación de click: como el contenido de #lotesContainer se re-renderiza,
+// el listener se ata una sola vez al contenedor (que sí es estable).
+document.getElementById('lotesContainer').addEventListener('click', e => {
+  const card = e.target.closest('.lote-card');
+  if (!card) return;
+  agregarInstancia(card.dataset.campo, card.dataset.lote);
+});
+
+function agregarInstancia(campo, lote) {
+  const c = getClienteActual();
+  const cp = c && c.campos.find(x => x.campo === campo);
+  const l = cp && cp.lotes.find(x => String(x.lote) === lote);
+  if (!l) return;
+  filaCounter++;
+  filas.push({
+    id: 'f' + filaCounter,
+    campo: campo,
+    lote: lote,
+    cultivoActual: l.cultivo,
+    ha: l.ha,
+    productos: [{ nombre: '', dosis: '', unidad: 'L/ha' }],
+    detalle: {}
+  });
+  renderLotes();
+  renderResumenProductos();
+}
+
+function quitarFila(id) {
+  filas = filas.filter(f => f.id !== id);
+  renderLotes();
+  renderResumenProductos();
+}
+
+function setHa(id, value) {
+  const f = getFila(id);
+  if (f) { f.ha = value; renderResumenProductos(); }
+}
+
+function renderLotesDetalleLista() {
+  const lista = document.getElementById('lotesDetalleLista');
+  const tipo = document.getElementById('tipo').value;
+  const conf = CAMPOS_POR_TIPO[tipo];
+
+  if (!conf || !filas.length) { lista.innerHTML = ''; return; }
+
+  lista.innerHTML = filas.map(f => `
+    <div class="lote-bloque" id="bloque_${f.id}">
+      <div class="lote-bloque-header">
+        <div>
+          <div class="lote-bloque-title">${escapeHtml(f.lote)} <span style="font-weight:400;font-size:0.82rem;opacity:0.85">— ${escapeHtml(f.campo)}</span></div>
+          <div class="lote-bloque-meta">
+            <span>Ha:</span>
+            <input type="number" step="0.01" class="ha-input" value="${escapeHtml(f.ha)}" oninput="setHa('${f.id}', this.value)">
+            <span>· ${escapeHtml(f.cultivoActual)}</span>
+          </div>
+        </div>
+        <button type="button" class="btn-quitar-fila" onclick="quitarFila('${f.id}')">✕ Quitar</button>
+      </div>
+      <div class="lote-bloque-body" id="body_${f.id}"></div>
+    </div>
+  `).join('');
+
+  filas.forEach(f => renderDetalleLote(f.id));
+}
+
+function copiarSelectorHtml(id) {
+  const otras = filas.filter(o => o.id !== id);
+  if (!otras.length) return '';
+  return `
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:0.75rem;font-weight:600;color:#5d6d7e;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;">🔁 Copiar de otro lote</label>
+      <select onchange="if(this.value){copiarDeFila('${id}', this.value);} this.value='';">
+        <option value="">— Elegir lote para copiar —</option>
+        ${otras.map(o => `<option value="${o.id}">${escapeHtml(o.lote)} — ${escapeHtml(o.campo)}</option>`).join('')}
+      </select>
+    </div>
+  `;
+}
+
+function copiarDeFila(targetId, sourceId) {
+  const target = getFila(targetId);
+  const source = getFila(sourceId);
+  if (!target || !source) return;
+  target.productos = source.productos.map(p => ({ ...p }));
+  target.detalle = { ...source.detalle };
+  renderDetalleLote(targetId);
+  renderResumenProductos();
+}
+
+function renderDetalleLote(id) {
+  const tipo = document.getElementById('tipo').value;
+  const conf = CAMPOS_POR_TIPO[tipo];
+  const detalleEl = document.getElementById('body_' + id);
+  if (!detalleEl) return;
+  const f = getFila(id);
+
+  if (conf.modo === 'productos') {
+    detalleEl.innerHTML = `
+      ${copiarSelectorHtml(id)}
+      <div id="prods_${id}"></div>
+      <button type="button" class="btn-add-prod" onclick="agregarProducto('${id}')">➕ Agregar producto</button>
+    `;
+    renderProductos(id);
+  } else {
+    detalleEl.innerHTML = `
+      ${copiarSelectorHtml(id)}
+      <div class="campos-tipo">${conf.campos.map(c => {
+        const val = c.key === 'cultivoNuevo' ? (f.cultivoActual || '') : (f.detalle[c.key] !== undefined ? f.detalle[c.key] : '');
+        if (c.type === 'select') {
+          return `<div class="form-group"><label>${c.label}</label>
+            <select onchange="setDetalle('${id}','${c.key}',this.value)">
+              ${c.options.map(o => `<option ${o === val ? 'selected' : ''}>${o}</option>`).join('')}
+            </select></div>`;
+        }
+        return `<div class="form-group"><label>${c.label}</label>
+          <input type="${c.type}" value="${escapeHtml(val)}" oninput="setDetalle('${id}','${c.key}',this.value)"></div>`;
+      }).join('')}</div>
+    `;
+    conf.campos.forEach(c => {
+      if (c.type === 'select' && f.detalle[c.key] === undefined) f.detalle[c.key] = c.options[0];
+      if (c.key === 'cultivoNuevo' && f.detalle[c.key] === undefined) f.detalle[c.key] = f.cultivoActual || '';
+    });
+  }
+}
+
+function setDetalle(id, key, value) {
+  const f = getFila(id);
+  if (f) f.detalle[key] = value;
+}
+
+function agregarProducto(id) {
+  const f = getFila(id);
+  f.productos.push({ nombre: '', dosis: '', unidad: 'L/ha' });
+  renderProductos(id);
+}
+
+function quitarProducto(id, idx) {
+  const f = getFila(id);
+  f.productos.splice(idx, 1);
+  if (!f.productos.length) f.productos.push({ nombre: '', dosis: '', unidad: 'L/ha' });
+  renderProductos(id);
+}
+
+function renderProductos(id) {
+  const cont = document.getElementById('prods_' + id);
+  const f = getFila(id);
+  cont.innerHTML = f.productos.map((p, idx) => `
+    <div class="prod-row">
+      <input class="p-nombre" placeholder="Producto" value="${escapeHtml(p.nombre)}"
+        oninput="getFila('${id}').productos[${idx}].nombre = this.value; renderResumenProductos();">
+      <input class="p-dosis" type="number" step="0.01" placeholder="Dosis" value="${escapeHtml(p.dosis)}"
+        oninput="getFila('${id}').productos[${idx}].dosis = this.value; renderResumenProductos();">
+      <select class="p-unidad" onchange="getFila('${id}').productos[${idx}].unidad = this.value; renderResumenProductos();">
+        ${UNIDADES_PRODUCTO.map(u => `<option ${u === p.unidad ? 'selected' : ''}>${u}</option>`).join('')}
+      </select>
+      <button type="button" class="p-del" onclick="quitarProducto('${id}',${idx})">✕</button>
+    </div>
+  `).join('');
+  renderResumenProductos();
+}
+
+function renderProductosSinResumen(id) {
+  const cont = document.getElementById('prods_' + id);
+  if (!cont) return;
+  const f = getFila(id);
+  cont.innerHTML = f.productos.map((p, idx) => `
+    <div class="prod-row">
+      <input class="p-nombre" placeholder="Producto" value="${escapeHtml(p.nombre)}"
+        oninput="getFila('${id}').productos[${idx}].nombre = this.value; renderResumenProductos();">
+      <input class="p-dosis" type="number" step="0.01" placeholder="Dosis" value="${escapeHtml(p.dosis)}"
+        oninput="getFila('${id}').productos[${idx}].dosis = this.value; renderResumenProductos();">
+      <select class="p-unidad" onchange="getFila('${id}').productos[${idx}].unidad = this.value; renderResumenProductos();">
+        ${UNIDADES_PRODUCTO.map(u => `<option ${u === p.unidad ? 'selected' : ''}>${u}</option>`).join('')}
+      </select>
+      <button type="button" class="p-del" onclick="quitarProducto('${id}',${idx})">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── RESUMEN POR PRODUCTO + AJUSTE POR BIDÓN ──────────────────
+function eKey(nombre, unidad) { return nombre.trim().toLowerCase() + '|||' + unidad; }
+
+function calcularMapaProductos() {
+  const tipo = document.getElementById('tipo').value;
+  const conf = CAMPOS_POR_TIPO[tipo];
+  const mapa = {};
+  if (!conf || conf.modo !== 'productos') return mapa;
+
+  filas.forEach(f => {
+    (f.productos || []).forEach(p => {
+      if (!p.nombre || !p.dosis || isNaN(parseFloat(p.dosis)) || parseFloat(p.dosis) <= 0) return;
+      const k = eKey(p.nombre, p.unidad);
+      if (!mapa[k]) mapa[k] = { nombre: p.nombre.trim(), unidad: p.unidad, total: 0, lotes: [] };
+      const sub = parseFloat(p.dosis) * parseFloat(f.ha || 0);
+      mapa[k].total += sub;
+      mapa[k].lotes.push({ loteId: f.lote, campo: f.campo, ha: f.ha, cultivo: f.cultivoActual, dosis: parseFloat(p.dosis), subtotal: sub });
+    });
+  });
+  return mapa;
+}
+
+function renderResumenProductos() {
+  const card = document.getElementById('cardResumen');
+  const cont = document.getElementById('resumenContainer');
+  const mapa = calcularMapaProductos();
+  const claves = Object.keys(mapa);
+
+  if (!claves.length) { card.style.display = 'none'; cont.innerHTML = ''; return; }
+  card.style.display = 'block';
+
+  cont.innerHTML = claves.map(k => {
+    const prod = mapa[k];
+    const unidS = prod.unidad.split('/')[0];
+    const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
+    const ajustado = acceptedTotals[k] !== undefined;
+    const displayTotal = ajustado ? acceptedTotals[k] : prod.total;
+    const factor = calcularFactor(k, mapa);
+    if (!retiros[k]) retiros[k] = [{ deposito: '', cantidad: Math.round(displayTotal * 100) / 100 }];
+
+    const filasHtml = prod.lotes.map(l => `
+      <tr>
+        <td>${escapeHtml(l.loteId)} <span style="color:#5d6d7e;font-size:0.75rem">(${escapeHtml(l.campo)})</span></td>
+        <td>${escapeHtml(l.cultivo)}</td>
+        <td class="num">${escapeHtml(l.ha)}</td>
+        <td class="num">${l.dosis.toFixed(3)}</td>
+        ${ajustado ? `<td class="num">${(l.dosis * factor).toFixed(3)}</td>` : ''}
+        <td class="num">${(l.subtotal * factor).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div class="resumen-prod-block">
+        <div class="resumen-prod-titulo">
+          <span>🧪 ${escapeHtml(prod.nombre)}</span>
+          <span style="font-size:0.8rem;color:#5d6d7e;font-weight:400">unidad: ${escapeHtml(prod.unidad)}</span>
+        </div>
+        <table class="resumen-table">
+          <thead><tr><th>Lote (Campo)</th><th>Cultivo</th><th>Ha</th><th>Dosis cargada</th>${ajustado ? '<th>Dosis ajustada</th>' : ''}<th>Total ${escapeHtml(unidS)}</th></tr></thead>
+          <tbody>
+            ${filasHtml}
+            <tr class="total-row"><td colspan="2">TOTAL</td><td class="num">${prod.lotes.reduce((s,l)=>s+parseFloat(l.ha||0),0)}</td><td>—</td>${ajustado ? '<td>—</td>' : ''}<td class="num">${displayTotal.toFixed(2)} ${unidS}</td></tr>
+          </tbody>
+        </table>
+        <div class="envase-box" style="margin-bottom:10px;">
+          <div class="envase-top-row">
+            <span class="envase-label">Tamaño del bidón/envase</span>
+            <input type="number" class="envase-input" id="env-${k}" value="${envase}" min="0.1" step="0.5"
+              oninput="recalcEnvase('${k}')" onchange="recalcEnvase('${k}')">
+            <span style="font-size:0.82rem;color:#5d6d7e;font-weight:600">${unidS}</span>
+            <span class="total-actual-chip">${ajustado ? 'Total ajustado' : 'Total sin ajustar'}: ${displayTotal.toFixed(2)} ${unidS}</span>
+            ${ajustado ? `<button type="button" class="btn-opcion" style="width:auto;background:#5d6d7e" onclick="deshacerAjuste('${k}')">↩️ Deshacer ajuste</button>` : ''}
+          </div>
+          <div id="envres-${k}">${buildEnvaseChips(k, prod.total, envase, prod.unidad, prod.lotes)}</div>
+        </div>
+        <div class="envase-box" style="border:1.5px solid #f5b041;background:#fef9e7;">
+          <div class="envase-label" style="margin-bottom:8px;font-size:0.88rem;color:#9a6005;">📦 ¿De dónde se retira? (Depósito / Agronomía — puede ser más de uno)</div>
+          ${(retiros[k] || []).map((r, idx) => `
+            <div class="prod-row">
+              <input placeholder="Depósito / Agronomía" value="${escapeHtml(r.deposito)}" style="flex:2"
+                oninput="actualizarRetiro('${k}',${idx},'deposito',this.value)">
+              <input type="number" step="0.01" placeholder="Cantidad" value="${escapeHtml(r.cantidad)}" style="flex:1"
+                oninput="actualizarRetiro('${k}',${idx},'cantidad',this.value)">
+              <span style="font-size:0.82rem;color:#5d6d7e;">${unidS}</span>
+              <button type="button" class="p-del" onclick="quitarRetiro('${k}',${idx})">✕</button>
+            </div>
+          `).join('')}
+          <button type="button" class="btn-add-prod" onclick="agregarRetiro('${k}')">➕ Agregar depósito</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function buildEnvaseChips(k, total, envase, unidad, lotes) {
+  const unidS = unidad.split('/')[0];
+  const effectiveTotal = acceptedTotals[k] !== undefined ? acceptedTotals[k] : Math.round(total * 100) / 100;
+  const envasesUp = Math.ceil(effectiveTotal / envase);
+  const envasesDown = Math.floor(effectiveTotal / envase);
+  const totalUp = envasesUp * envase;
+  const totalDown = envasesDown * envase;
+  const isExact = Math.abs(totalUp - effectiveTotal) < 0.001;
+
+  function dosisPreviewHtml(nuevoTotal) {
+    if (!lotes || !lotes.length) return '';
+    const f = nuevoTotal / total;
+    const items = lotes.map(l => `${escapeHtml(l.loteId)}: ${(l.dosis * f).toFixed(3)}`).join(' · ');
+    return `<div style="font-size:0.72rem;color:#5d6d7e;margin-bottom:6px;line-height:1.4;">Dosis nueva por lote: ${items}</div>`;
+  }
+
+  if (isExact) {
+    return `<div class="opciones-row">
+      <div class="opcion-envase" style="border-color:#27ae60">
+        <div class="opcion-header">✓ Total exacto</div>
+        <div class="opcion-num">${envasesUp} envase${envasesUp !== 1 ? 's' : ''} × ${envase} ${unidS} = ${totalUp.toFixed(2)} ${unidS}</div>
+        <div class="opcion-pct pct-exact">Sin ajuste necesario</div>
+        <button class="btn-opcion" disabled>✓ Exacto</button>
+      </div>
+    </div>`;
+  }
+
+  const pctUp = ((totalUp / total - 1) * 100).toFixed(1);
+  const diffUp = (totalUp - total).toFixed(2);
+  let downHTML = '';
+  if (envasesDown > 0) {
+    const pctDown = (((totalDown / total) - 1) * 100).toFixed(1);
+    const diffDown = (totalDown - total).toFixed(2);
+    downHTML = `
+      <div class="opcion-envase">
+        <div class="opcion-header">▼ Redondear para abajo</div>
+        <div class="opcion-num">${envasesDown} envase${envasesDown !== 1 ? 's' : ''} × ${envase} ${unidS} = ${totalDown.toFixed(2)} ${unidS}</div>
+        <div class="opcion-pct pct-down">${pctDown}% (${diffDown} ${unidS})</div>
+        ${dosisPreviewHtml(totalDown)}
+        <button class="btn-opcion" onclick="aceptarAjuste('${k}', ${totalDown})">✓ Aceptar ▼</button>
+      </div>`;
+  }
+
+  return `<div class="opciones-row">
+    <div class="opcion-envase">
+      <div class="opcion-header">▲ Redondear para arriba</div>
+      <div class="opcion-num">${envasesUp} envase${envasesUp !== 1 ? 's' : ''} × ${envase} ${unidS} = ${totalUp.toFixed(2)} ${unidS}</div>
+      <div class="opcion-pct pct-up">+${pctUp}% (+${diffUp} ${unidS})</div>
+      ${dosisPreviewHtml(totalUp)}
+      <button class="btn-opcion" onclick="aceptarAjuste('${k}', ${totalUp})">✓ Aceptar ▲</button>
+    </div>
+    ${downHTML}
+  </div>`;
+}
+
+function recalcEnvase(k) {
+  const input = document.getElementById('env-' + k);
+  if (!input) return;
+  const envase = parseFloat(input.value);
+  if (!envase || envase <= 0) return;
+  envaseSize[k] = envase;
+  const mapa = calcularMapaProductos();
+  const prod = mapa[k];
+  if (!prod) return;
+  const el = document.getElementById('envres-' + k);
+  if (el) el.innerHTML = buildEnvaseChips(k, prod.total, envase, prod.unidad, prod.lotes);
+}
+
+// El ajuste por bidón NO modifica la dosis cargada en cada lote —
+// solo guarda el total aceptado. La dosis final ajustada se calcula
+// al momento de mostrar/guardar (ver calcularFactor / confirmar()).
+// Así, "Deshacer ajuste" siempre puede volver al valor original.
+function aceptarAjuste(k, newTotal) {
+  const mapa = calcularMapaProductos();
+  const prod = mapa[k];
+  if (!prod || !newTotal || prod.total <= 0) return;
+  acceptedTotals[k] = newTotal;
+  // Sincronizar retiro con el total redondeado
+  const totalRedondeado = Math.round(newTotal * 100) / 100;
+  if (!retiros[k] || retiros[k].length === 0) {
+    retiros[k] = [{ deposito: '', cantidad: totalRedondeado }];
+  } else if (retiros[k].length === 1) {
+    retiros[k][0].cantidad = totalRedondeado;
+  }
+  renderResumenProductos();
+}
+
+function deshacerAjuste(k) {
+  const mapa = calcularMapaProductos();
+  const prod = mapa[k];
+  delete acceptedTotals[k];
+  // Volver el retiro al total original
+  if (retiros[k] && retiros[k].length === 1 && prod) {
+    retiros[k][0].cantidad = Math.round(prod.total * 100) / 100;
+  }
+  renderResumenProductos();
+}
+
+// ── RETIRO / DEPÓSITO (de dónde se retira cada producto) ──────
+function agregarRetiro(k) {
+  if (!retiros[k]) retiros[k] = [];
+  const mapa = calcularMapaProductos();
+  const prod = mapa[k];
+  const total = prod ? (acceptedTotals[k] !== undefined ? acceptedTotals[k] : prod.total) : 0;
+  const usado = retiros[k].reduce((s, r) => s + (parseFloat(r.cantidad) || 0), 0);
+  const restante = Math.max(0, Math.round((total - usado) * 100) / 100);
+  retiros[k].push({ deposito: '', cantidad: restante > 0 ? restante : '' });
+  renderResumenProductos();
+}
+
+function quitarRetiro(k, idx) {
+  if (!retiros[k]) return;
+  retiros[k].splice(idx, 1);
+  renderResumenProductos();
+}
+
+function actualizarRetiro(k, idx, campo, value) {
+  if (!retiros[k] || !retiros[k][idx]) return;
+  retiros[k][idx][campo] = value;
+}
+
+function calcularFactor(k, mapa) {
+  const prod = mapa[k];
+  if (!prod || acceptedTotals[k] === undefined || prod.total <= 0) return 1;
+  return acceptedTotals[k] / prod.total;
+}
+
+async function confirmar() {
+  const btn = document.getElementById('btnConfirmar');
+  const msg = document.getElementById('msg');
+  const cliente = document.getElementById('cliente').value;
+  const tipo = document.getElementById('tipo').value;
+  const fecha = document.getElementById('fecha').value;
+  const operador = document.getElementById('operador').value;
+  const observaciones = document.getElementById('observaciones').value;
+  const tipoAplicacion = document.getElementById('tipoAplicacion') ? document.getElementById('tipoAplicacion').value : '';
+  const ot = document.getElementById('ot').value.trim();
+
+  if (!cliente || !tipo || !fecha) {
+    msg.textContent = '⚠️ Completá cliente, tipo de labor y fecha.';
+    msg.className = 'msg err';
+    return;
+  }
+  if (!filas.length) {
+    msg.textContent = '⚠️ Agregá al menos un lote (hacé click en un lote de la lista).';
+    msg.className = 'msg err';
+    return;
+  }
+
+  btn.disabled = true;
+  msg.textContent = '';
+
+  try {
+    const conf = CAMPOS_POR_TIPO[tipo];
+    const mapaOriginal = calcularMapaProductos();
+
+    const lotesPayload = filas.map(f => {
+      const productos = conf.modo === 'productos'
+        ? f.productos
+            .filter(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0)
+            .map(p => {
+              const k = eKey(p.nombre, p.unidad);
+              const factor = calcularFactor(k, mapaOriginal);
+              return { nombre: p.nombre, dosis: (parseFloat(p.dosis) * factor).toFixed(4), unidad: p.unidad };
+            })
+        : [];
+      const cultivoFinal = (conf.modo === 'campos' && f.detalle.cultivoNuevo) ? f.detalle.cultivoNuevo : f.cultivoActual;
+      return {
+        lote: f.lote, campo: f.campo, cultivo: cultivoFinal, ha: f.ha,
+        productos: productos,
+        detalle: conf.modo === 'campos' ? f.detalle : (tipoAplicacion ? { tipoAplicacion } : {})
+      };
+    });
+
+    const camposUnicos = [...new Set(filas.map(f => f.campo))];
+    const campoLabel = camposUnicos.length === 1 ? camposUnicos[0] : camposUnicos.join(' + ');
+
+    const logoDataUrl = await getLogoDataUrl().catch(() => null);
+    const doc = new jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const VERDE       = [45, 95, 36];
+    const VERDE_CLARO = [227, 240, 221];
+    const GRIS        = [240, 244, 248];
+    const BLANCO      = [255, 255, 255];
+    const marginL = 14;
+    const pageW   = 210;
+    const cW      = pageW - marginL * 2;
+    const fechaFmt = fecha.split('-').reverse().join('/');
+
+    function drawPageHeader() {
+      doc.setFillColor(...VERDE);
+      doc.rect(0, 0, pageW, 34, 'F');
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, 'PNG', pageW - marginL - 46, 3, 46, 19.9);
+      }
+      doc.setTextColor(...BLANCO);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text('Planilla de Labores', marginL, 11);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const meta = [ot || null, cliente, campoLabel, tipo, fechaFmt, operador].filter(Boolean).join('  |  ');
+      doc.text(meta, marginL, 19);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    function drawPageFooter(pageNum, totalPages) {
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Pagina ${pageNum} / ${totalPages}`, pageW - marginL, 290, { align: 'right' });
+      if (observaciones) doc.text(`Obs: ${observaciones}`, marginL, 290);
+      doc.setTextColor(0, 0, 0);
+    }
+
+    let y = 40;
+    drawPageHeader();
+
+    if (conf.modo === 'productos') {
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('APLICACION POR LOTE', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      filas.forEach(f => {
+        const prods = (f.productos || []).filter(p => p.nombre && p.dosis && parseFloat(p.dosis) > 0);
+        if (!prods.length) return;
+
+        if (y > 250) { doc.addPage(); drawPageHeader(); y = 40; }
+
+        doc.setFillColor(...VERDE);
+        doc.roundedRect(marginL, y, cW, 8, 1.5, 1.5, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...BLANCO);
+        doc.text(`${f.lote} (${f.campo})`, marginL + 3, y + 5.5);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.text(`${f.ha} ha   |   ${f.cultivoActual}`, marginL + 75, y + 5.5);
+        doc.setTextColor(0, 0, 0);
+        y += 10;
+
+        const rows = prods.map(p => {
+          const k = eKey(p.nombre, p.unidad);
+          const factor = calcularFactor(k, mapaOriginal);
+          const dosisAj = parseFloat(p.dosis) * factor;
+          const unidS = p.unidad.split('/')[0];
+          return [p.nombre, dosisAj.toFixed(3), p.unidad, (dosisAj * parseFloat(f.ha || 0)).toFixed(2) + ' ' + unidS];
+        });
+
+        doc.autoTable({
+          head: [['Producto', 'Dosis / ha', 'Unidad', 'Total']],
+          body: rows,
+          startY: y,
+          margin: { left: marginL, right: marginL },
+          styles: { fontSize: 9, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 } },
+          headStyles: { fillColor: VERDE_CLARO, textColor: VERDE, fontStyle: 'bold', fontSize: 8.5 },
+          columnStyles: {
+            0: { cellWidth: 'auto' }, 1: { cellWidth: 28, halign: 'right' },
+            2: { cellWidth: 22, halign: 'center' }, 3: { cellWidth: 32, halign: 'right', fontStyle: 'bold' }
+          },
+          alternateRowStyles: { fillColor: [248, 251, 248] },
+          theme: 'plain',
+          tableLineColor: [220, 220, 220],
+          tableLineWidth: 0.2,
+        });
+        y = doc.lastAutoTable.finalY + 7;
+      });
+
+      if (y > 220) { doc.addPage(); drawPageHeader(); y = 40; }
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('RESUMEN DE PRODUCTOS TOTALES', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const clavesProd = Object.keys(mapaOriginal);
+      const stockRows = clavesProd.map(k => {
+        const prod = mapaOriginal[k];
+        const envase = envaseSize[k] !== undefined ? envaseSize[k] : 20;
+        const totalForCalc = acceptedTotals[k] !== undefined ? acceptedTotals[k] : Math.round(prod.total * 100) / 100;
+        const envases = envase > 0 ? Math.ceil(totalForCalc / envase) : 0;
+        const totalAj = envases * envase;
+        const unidS = prod.unidad.split('/')[0];
+        const sobrante = totalAj - totalForCalc;
+        const retirosTxt = (retiros[k] || [])
+          .filter(r => r.deposito || r.cantidad)
+          .map(r => `${r.cantidad || '?'} ${unidS} - ${r.deposito || '(sin nombre)'}`)
+          .join('\n') || '—';
+        return [
+          prod.nombre, prod.unidad, totalForCalc.toFixed(2) + ' ' + unidS,
+          `${envase} ${unidS}`, `${envases} envase${envases !== 1 ? 's' : ''}`,
+          totalAj.toFixed(2) + ' ' + unidS,
+          sobrante < 0.005 ? 'Exacto' : '+' + sobrante.toFixed(2) + ' ' + unidS,
+          retirosTxt
+        ];
+      });
+
+      doc.autoTable({
+        head: [['Producto', 'Unidad', 'Total neto', 'Tam. envase', 'Envases', 'Total a comprar', 'Sobrante', 'Retira de']],
+        body: stockRows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 8.5, cellPadding: { top: 3, bottom: 3, left: 3, right: 3 } },
+        headStyles: { fillColor: VERDE, textColor: BLANCO, fontStyle: 'bold', fontSize: 8 },
+        columnStyles: {
+          0: { fontStyle: 'bold' }, 2: { halign: 'right' }, 3: { halign: 'center' },
+          4: { halign: 'center', fontStyle: 'bold' }, 5: { halign: 'right', fontStyle: 'bold' }, 6: { halign: 'right' },
+          7: { fontSize: 7.5 }
+        },
+        willDrawCell(data) {
+          if (data.section !== 'body') return;
+          if (data.column.index === 6) {
+            if (data.cell.raw === 'Exacto') { data.cell.styles.textColor = [27, 132, 73]; data.cell.styles.fontStyle = 'bold'; }
+            else data.cell.styles.textColor = [154, 96, 5];
+          }
+          if (data.column.index === 4) { data.cell.styles.fillColor = [237, 247, 230]; data.cell.styles.textColor = [45, 95, 36]; }
+        },
+        alternateRowStyles: { fillColor: [248, 251, 248] },
+        theme: 'plain',
+        tableLineColor: [220, 220, 220],
+        tableLineWidth: 0.2,
+      });
+      y = doc.lastAutoTable.finalY + 9;
+
+      if (y > 220) { doc.addPage(); drawPageHeader(); y = 40; }
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('RESUMEN PARA PROGRAMAS DE GESTIÓN', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const pgRows = [];
+      clavesProd.forEach(k => {
+        const prod = mapaOriginal[k];
+        const factor = calcularFactor(k, mapaOriginal);
+        const unidS = prod.unidad.split('/')[0];
+        const grupos = {};
+        const ordenGrupos = [];
+        prod.lotes.forEach(l => {
+          const gKey = l.campo + '|||' + l.cultivo;
+          if (!grupos[gKey]) {
+            grupos[gKey] = { campo: l.campo, cultivo: l.cultivo, ha: 0, total: 0 };
+            ordenGrupos.push(gKey);
+          }
+          grupos[gKey].ha += parseFloat(l.ha || 0);
+          grupos[gKey].total += l.subtotal * factor;
+        });
+        ordenGrupos.forEach(gKey => {
+          const g = grupos[gKey];
+          pgRows.push([prod.nombre, prod.unidad, g.campo, g.cultivo, g.ha.toFixed(2), g.total.toFixed(2) + ' ' + unidS]);
+        });
+      });
+
+      doc.autoTable({
+        head: [['Producto', 'Unidad', 'Campo', 'Cultivo', 'Ha', 'Cantidad']],
+        body: pgRows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 8.5, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 } },
+        headStyles: { fillColor: VERDE, textColor: BLANCO, fontStyle: 'bold', fontSize: 8 },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          4: { halign: 'right' },
+          5: { halign: 'right', fontStyle: 'bold', textColor: VERDE }
+        },
+        alternateRowStyles: { fillColor: [248, 251, 248] },
+        theme: 'plain',
+        tableLineColor: [220, 220, 220],
+        tableLineWidth: 0.2,
+      });
+      y = doc.lastAutoTable.finalY + 9;
+
+    } else {
+      doc.setFillColor(...GRIS);
+      doc.rect(marginL, y, cW, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('DETALLE POR LOTE', marginL + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 11;
+
+      const rows = lotesPayload.map(l => {
+        const detalleTxt = Object.keys(l.detalle || {}).map(k => k + ': ' + l.detalle[k]).join(' · ');
+        return [l.campo, l.lote, l.cultivo, l.ha, detalleTxt];
+      });
+      doc.autoTable({
+        head: [['Campo', 'Lote', 'Cultivo', 'Ha', 'Detalle']],
+        body: rows,
+        startY: y,
+        margin: { left: marginL, right: marginL },
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: VERDE_CLARO, textColor: VERDE, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 251, 248] },
+        theme: 'plain',
+      });
+      y = doc.lastAutoTable.finalY + 9;
+    }
+
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      drawPageFooter(i, totalPages);
+    }
+
+    const nombreArchivo = `${ot ? ot + '_' : ''}${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g, '_');
+    doc.save(nombreArchivo);
+
+    const payload = JSON.stringify({
+      fecha, tipo, operador, observaciones,
+      planilla: cliente + ' - ' + campoLabel,
+      ot: ot,
+      cliente, campo: campoLabel,
+      lotes: lotesPayload
+    });
+    const guardarUrl = ot
+      ? SHEETS_URL + '?action=actualizarLaborAuth&token=' + encodeURIComponent(staffToken) + '&ot=' + encodeURIComponent(ot) + '&payload=' + encodeURIComponent(payload)
+      : SHEETS_URL + '?action=guardarLaborAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload);
+    const resGuardar = await jsonp(guardarUrl);
+    if (!resGuardar.ok) {
+      if (/sesión|iniciar sesión/i.test(resGuardar.error || '')) {
+        cerrarSesionStaff();
+        return;
+      }
+      throw new Error(resGuardar.error || 'No se pudo guardar la labor');
+    }
+
+    if (tipo === 'Siembra') {
+      lotesPayload.forEach(l => {
+        const lotePayload = JSON.stringify({ cliente, campo: l.campo, lote: l.lote, cultivo: l.cultivo, ha: l.ha });
+        guardarSilencioso(SHEETS_URL + '?action=guardarLote&payload=' + encodeURIComponent(lotePayload));
+      });
+    }
+
+    msg.textContent = '✅ PDF guardado y labor cargada en la base de datos.';
+    msg.className = 'msg ok';
+    filas = [];
+    envaseSize = {};
+    acceptedTotals = {};
+    retiros = {};
+    renderLotes();
+    renderResumenProductos();
+  } catch (err) {
+    msg.textContent = '⚠️ Error: ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── CARGAR OT EXISTENTE ───────────────────────────────────────
+document.getElementById('ot').addEventListener('keydown', async function(e) {
+  if (e.key !== 'Enter') return;
+  const otBuscada = this.value.trim();
+  if (!otBuscada) return;
+  await cargarOT(otBuscada);
+});
+
+async function cargarOT(otBuscada) {
+  const msg = document.getElementById('msg');
+  msg.textContent = '🔍 Buscando OT ' + otBuscada + '…';
+  msg.className = 'msg';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=buscarPorOT&ot=' + encodeURIComponent(otBuscada));
+    if (!data.ok || !data.labores || !data.labores.length) {
+      msg.textContent = '';
+      return;
+    }
+    const labor = data.labores[0];
+
+    if (labor.fecha) document.getElementById('fecha').value = labor.fecha;
+    if (labor.operador) document.getElementById('operador').value = labor.operador;
+    if (labor.observaciones) document.getElementById('observaciones').value = labor.observaciones;
+
+    if (labor.tipo) {
+      document.getElementById('tipo').value = labor.tipo;
+      onTipoChange();
+    }
+
+    const detalle0 = (labor.lotes && labor.lotes[0] && labor.lotes[0].detalle) || {};
+    if (detalle0.tipoAplicacion) {
+      const taSel = document.getElementById('tipoAplicacion');
+      if (taSel) taSel.value = detalle0.tipoAplicacion;
+    }
+
+    if (labor.cliente) {
+      document.getElementById('cliente').value = labor.cliente;
+      onClienteChange();
+    }
+
+    const primerCampo = (labor.lotes && labor.lotes[0] && labor.lotes[0].campo) || labor.campo || '';
+    if (primerCampo) document.getElementById('campo').value = primerCampo;
+
+    filas = [];
+    filaCounter = 0;
+    (labor.lotes || []).forEach(l => {
+      filaCounter++;
+      const prods = (l.productos && l.productos.length)
+        ? l.productos.map(p => ({ nombre: p.nombre, dosis: p.dosis, unidad: p.unidad }))
+        : [{ nombre: '', dosis: '', unidad: 'L/ha' }];
+      filas.push({
+        id: 'f' + filaCounter,
+        campo: l.campo || primerCampo,
+        lote: l.lote,
+        cultivoActual: l.cultivo,
+        ha: l.ha,
+        productos: prods,
+        detalle: l.detalle || {}
+      });
+    });
+
+    envaseSize = {};
+    acceptedTotals = {};
+    retiros = {};
+    renderLotes();
+    renderResumenProductos();
+
+    msg.textContent = '✅ OT ' + otBuscada + ' cargada — modificá lo que necesites y confirmá para reemplazarla.';
+    msg.className = 'msg ok';
+  } catch (err) {
+    msg.textContent = '⚠️ Error buscando OT: ' + err.message;
+    msg.className = 'msg err';
+  }
+}
+
+document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+
+// ── OT: ORDEN DE TRABAJO ──────────────────────────────────────
+function sugerirOT() {
+  const fechaVal = document.getElementById('fecha').value || new Date().toISOString().split('T')[0];
+  const [anio, mes, dia] = fechaVal.split('-');
+  const fechaStr = dia + mes + anio;
+  const storageKey = 'ot_counter_' + fechaStr;
+  let contador = parseInt(localStorage.getItem(storageKey) || '0', 10) + 1;
+  const otSugerida = fechaStr + contador;
+  document.getElementById('ot').value = otSugerida;
+  localStorage.setItem(storageKey, contador);
+}
+
+cargarMaestro();
+sugerirOT();
+</script>
+</body>
+</html>
