@@ -18,6 +18,19 @@
   header .logo { font-size: 2rem; }
   header h1 { font-size: 1.4rem; font-weight: 700; }
   header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+
+  /* TABS */
+  .tab-nav {
+    background: #1a5276; display: flex; gap: 0; padding: 0 30px;
+  }
+  .tab-btn {
+    background: none; border: none; color: rgba(255,255,255,0.65);
+    padding: 12px 22px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    border-bottom: 3px solid transparent; transition: all 0.15s;
+  }
+  .tab-btn:hover { color: white; }
+  .tab-btn.active { color: white; border-bottom-color: #f5b041; }
+
   .container { max-width: 1100px; margin: 28px auto; padding: 0 18px; }
   .card {
     background: white; border-radius: 12px;
@@ -40,50 +53,25 @@
     font-size: 0.93rem; color: #1a202c; background: #fff;
   }
   .campo-group { margin-bottom: 18px; }
-  .campo-group-title {
-    font-size: 0.85rem; font-weight: 700; color: #2e86c1;
-    margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em;
-  }
-  .lotes-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-  }
+  .campo-group-title { font-size: 0.85rem; font-weight: 700; color: #2e86c1; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .lotes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
   .lote-card {
-    border: 2px solid #d5d8dc; border-radius: 10px;
-    padding: 10px 12px; cursor: pointer; position: relative;
+    border: 2px solid #d5d8dc; border-radius: 10px; padding: 10px 12px; cursor: pointer; position: relative;
     transition: all 0.18s; background: #fafcfe; user-select: none;
   }
   .lote-card:hover { border-color: #2e86c1; background: #eaf4fb; }
   .lote-card.en-orden { border-color: #1a5276; background: #d6eaf8; }
   .lote-card .lote-name { font-weight: 700; font-size: 0.95rem; color: #1a5276; }
   .lote-card .lote-ha { font-weight: 600; color: #27ae60; font-size: 0.82rem; margin-top: 2px; }
-  .lote-card .cultivo-badge {
-    display: inline-block; background: #eafaf1; color: #1e8449;
-    border-radius: 4px; padding: 1px 6px; font-size: 0.72rem;
-    font-weight: 700; margin-top: 4px; text-transform: uppercase;
-  }
-  .lote-count-badge {
-    position: absolute; top: -8px; right: -8px; background: #1a5276; color: white;
-    border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center;
-    justify-content: center; font-size: 0.72rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-  }
+  .lote-card .cultivo-badge { display: inline-block; background: #eafaf1; color: #1e8449; border-radius: 4px; padding: 1px 6px; font-size: 0.72rem; font-weight: 700; margin-top: 4px; text-transform: uppercase; }
+  .lote-count-badge { position: absolute; top: -8px; right: -8px; background: #1a5276; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
   .lotes-detalle-lista { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; }
   .lote-bloque { border: 2px solid #aed6f1; border-radius: 12px; overflow: hidden; }
-  .lote-bloque-header {
-    background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
-    padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
-  }
+  .lote-bloque-header { background: linear-gradient(135deg, #1a5276, #2e86c1); color: white; padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .lote-bloque-title { font-weight: 700; font-size: 1rem; }
   .lote-bloque-meta { font-size: 0.82rem; opacity: 0.95; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-  .ha-input {
-    width: 70px; padding: 4px 6px; border: none; border-radius: 5px; font-size: 0.85rem;
-    color: #1a202c; background: rgba(255,255,255,0.9);
-  }
-  .btn-quitar-fila {
-    background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4); color: white;
-    border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
-  }
+  .ha-input { width: 70px; padding: 4px 6px; border: none; border-radius: 5px; font-size: 0.85rem; color: #1a202c; background: rgba(255,255,255,0.9); }
+  .btn-quitar-fila { background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4); color: white; border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
   .lote-bloque-body { padding: 14px 16px; }
   .prod-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
   .prod-row input, .prod-row select { padding: 7px 10px; border: 1.5px solid #d5d8dc; border-radius: 7px; font-size: 0.88rem; }
@@ -91,21 +79,12 @@
   .prod-row .p-dosis { flex: 1; }
   .prod-row .p-unidad { flex: 1; }
   .prod-row .p-del { background: #fdecea; color: #c0392b; border: none; border-radius: 6px; padding: 7px 10px; cursor: pointer; font-weight: 700; }
-  .btn-add-prod {
-    background: #eef4fa; color: #1a5276; border: 1.5px solid #d6eaf8; border-radius: 7px;
-    padding: 6px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
-  }
+  .btn-add-prod { background: #eef4fa; color: #1a5276; border: 1.5px solid #d6eaf8; border-radius: 7px; padding: 6px 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
   .campos-tipo { display: flex; gap: 10px; flex-wrap: wrap; }
   .campos-tipo .form-group { min-width: 140px; flex: 1; }
-  .btn {
-    background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;
-    border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem;
-    font-weight: 700; cursor: pointer;
-  }
+  .btn { background: linear-gradient(135deg, #1a5276, #2e86c1); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
   .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .btn-confirmar {
-    padding: 13px 32px; font-size: 1.05rem; width: 100%; letter-spacing: 0.02em;
-  }
+  .btn-confirmar { padding: 13px 32px; font-size: 1.05rem; width: 100%; letter-spacing: 0.02em; }
   .empty { text-align: center; padding: 20px; color: #5d6d7e; font-size: 0.9rem; }
   .msg { margin-top: 12px; font-size: 0.85rem; font-weight: 600; text-align: center; }
   .msg.ok { color: #27ae60; }
@@ -130,14 +109,34 @@
   .pct-exact { color: #27ae60; }
   .pct-up { color: #c0392b; }
   .pct-down { color: #d68910; }
-  .btn-opcion {
-    width: 100%; padding: 7px; border-radius: 7px; border: none; cursor: pointer;
-    font-size: 0.82rem; font-weight: 700; background: #1a5276; color: #fff;
-  }
+  .btn-opcion { width: 100%; padding: 7px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.82rem; font-weight: 700; background: #1a5276; color: #fff; }
   .btn-opcion:disabled { background: #d6eaf8; color: #1a5276; cursor: default; }
   .comentario-lote { margin-top: 12px; }
   .comentario-lote label { display: block; font-size: 0.75rem; font-weight: 600; color: #5d6d7e; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
   .comentario-lote textarea { width: 100%; padding: 8px 10px; border: 1.5px solid #d5d8dc; border-radius: 7px; font-size: 0.88rem; color: #1a202c; resize: vertical; min-height: 52px; font-family: inherit; }
+
+  /* STOCK */
+  .stock-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .stock-table th { background: #1a5276; color: white; padding: 9px 12px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .stock-table td { padding: 9px 12px; border-bottom: 1px solid #eef1f4; vertical-align: middle; }
+  .stock-table tr:last-child td { border-bottom: none; }
+  .stock-table tr:hover td { background: #f8fafc; }
+  .stock-table .dep-header td { background: #d6eaf8; font-weight: 700; color: #1a5276; padding: 7px 12px; font-size: 0.82rem; }
+  .stock-cant-input { width: 80px; padding: 5px 8px; border: 1.5px solid #d5d8dc; border-radius: 6px; font-size: 0.88rem; text-align: right; }
+  .stock-bajo { color: #c0392b; font-weight: 700; }
+  .stock-ok { color: #27ae60; font-weight: 600; }
+  .stock-warn { color: #d68910; font-weight: 600; }
+  .badge-mov { display: inline-block; background: #eafaf1; color: #1e8449; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; margin-left: 6px; }
+  .badge-mov.neg { background: #fdecea; color: #c0392b; }
+  .mov-lista { max-height: 300px; overflow-y: auto; }
+  .mov-row { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid #eef1f4; font-size: 0.82rem; }
+  .mov-row:last-child { border-bottom: none; }
+  .mov-fecha { color: #5d6d7e; white-space: nowrap; min-width: 90px; }
+  .mov-prod { font-weight: 600; flex: 1; }
+  .mov-dep { color: #5d6d7e; flex: 1; }
+  .mov-cant { font-weight: 700; white-space: nowrap; }
+  .mov-cant.pos { color: #27ae60; }
+  .mov-cant.neg { color: #c0392b; }
 </style>
 </head>
 <body>
@@ -156,7 +155,18 @@
   </div>
 </header>
 
+<nav class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('planilla')" id="tab-btn-planilla">📋 Planilla de Labores</button>
+  <button class="tab-btn" onclick="showTab('stock')" id="tab-btn-stock">📦 Stock de Insumos</button>
+</nav>
+
 <datalist id="productos-list"></datalist>
+<datalist id="depositos-list"></datalist>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  TAB: PLANILLA                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-planilla">
 <div class="container">
 
   <div class="card">
@@ -203,10 +213,7 @@
       </div>
       <div class="form-group" id="grupoTipoAplicacion" style="display:none;">
         <label>Tipo de aplicación</label>
-        <select id="tipoAplicacion">
-          <option>TERRESTRE</option>
-          <option>AVIÓN</option>
-        </select>
+        <select id="tipoAplicacion"><option>TERRESTRE</option><option>AVIÓN</option></select>
       </div>
       <div class="form-group">
         <label>Operador / Empresa</label>
@@ -236,6 +243,55 @@
   </div>
 
 </div>
+</div><!-- /tab-planilla -->
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  TAB: STOCK                                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-stock" style="display:none;">
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">➕ Agregar / reponer insumo</div>
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group">
+        <label>Producto</label>
+        <input type="text" id="sNombre" list="productos-list" placeholder="Nombre del producto" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Depósito / Agronomía</label>
+        <input type="text" id="sDeposito" list="depositos-list" placeholder="Ej: Agropecuaria XYZ" autocomplete="off">
+      </div>
+      <div class="form-group" style="max-width:130px;">
+        <label>Cantidad</label>
+        <input type="number" id="sCantidad" step="0.01" min="0" placeholder="0">
+      </div>
+      <div class="form-group" style="max-width:100px;">
+        <label>Unidad</label>
+        <select id="sUnidad"><option>L</option><option>kg</option><option>cc</option><option>g</option></select>
+      </div>
+      <div class="form-group" style="max-width:150px;display:flex;align-items:flex-end;">
+        <button class="btn" style="width:100%;" onclick="agregarStock()">➕ Agregar</button>
+      </div>
+    </div>
+    <div class="msg" id="msgStock"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="justify-content:space-between;">
+      <span>📋 Stock actual</span>
+      <button onclick="renderStock()" style="font-size:0.78rem;background:#f0f4f8;border:1px solid #d5d8dc;border-radius:6px;padding:4px 10px;cursor:pointer;color:#5d6d7e;">🔄 Actualizar</button>
+    </div>
+    <div id="stockContainer"><div class="empty">Sin insumos cargados.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📜 Últimos movimientos</div>
+    <div id="movContainer" class="mov-lista"><div class="empty">Sin movimientos.</div></div>
+  </div>
+
+</div>
+</div><!-- /tab-stock -->
 
 <script>
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
@@ -256,21 +312,261 @@ document.addEventListener('DOMContentLoaded', () => {
   if (lbl) lbl.textContent = staffUsuario || '';
 });
 
-const UNIDADES_PRODUCTO = ['L/ha','kg/ha','cc/ha','g/ha'];
+// ── TABS ──────────────────────────────────────────────────────
+function showTab(name) {
+  ['planilla','stock'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+  });
+  if (name === 'stock') {
+    renderStock();
+    renderMovimientos();
+    // Refrescar datos del servidor cada vez que se abre la solapa
+    refreshStockCache().then(() => { renderStock(); renderResumenProductos(); });
+  }
+}
 
+// ── AUTOCOMPLETE ──────────────────────────────────────────────
+const UNIDADES_PRODUCTO = ['L/ha','kg/ha','cc/ha','g/ha'];
+let productosConocidos = new Set(JSON.parse(localStorage.getItem('productos_conocidos') || '[]'));
+
+function actualizarDatalist() {
+  const dl = document.getElementById('productos-list');
+  if (dl) dl.innerHTML = [...productosConocidos].sort().map(p => `<option value="${escapeHtml(p)}">`).join('');
+  // depósitos datalist
+  const stock = cargarStockData();
+  const deps  = [...new Set(stock.map(s => s.deposito).filter(Boolean))].sort();
+  const dd = document.getElementById('depositos-list');
+  if (dd) dd.innerHTML = deps.map(d => `<option value="${escapeHtml(d)}">`).join('');
+}
+function guardarProductoConocido(nombre) {
+  if (!nombre || nombre.trim().length < 2) return;
+  productosConocidos.add(nombre.trim());
+  localStorage.setItem('productos_conocidos', JSON.stringify([...productosConocidos]));
+  actualizarDatalist();
+}
+
+// ── STOCK DATA — centralizado en Google Sheets ───────────────
+// stockCache: copia local para mostrar en UI sin esperar cada vez
+let stockCache = [];
+
+function cargarStockData() { return stockCache; } // lectura síncrona desde caché
+
+async function refreshStockCache() {
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=getStock');
+    if (data.ok) {
+      stockCache = data.stock || [];
+      actualizarDatalist();
+    }
+  } catch(e) { /* silencioso — stockCache queda con lo anterior */ }
+}
+
+async function agregarStock() {
+  const nombre   = document.getElementById('sNombre').value.trim();
+  const deposito = document.getElementById('sDeposito').value.trim();
+  const cantidad = parseFloat(document.getElementById('sCantidad').value);
+  const unidad   = document.getElementById('sUnidad').value;
+  const msgEl    = document.getElementById('msgStock');
+
+  if (!nombre)  { msgEl.textContent='⚠️ Ingresá el nombre del producto.'; msgEl.className='msg err'; return; }
+  if (!deposito){ msgEl.textContent='⚠️ Ingresá el depósito.';            msgEl.className='msg err'; return; }
+  if (isNaN(cantidad) || cantidad <= 0) { msgEl.textContent='⚠️ Cantidad inválida.'; msgEl.className='msg err'; return; }
+
+  msgEl.textContent='⏳ Guardando…'; msgEl.className='msg';
+  guardarProductoConocido(nombre);
+
+  // Optimistic: actualizar caché local inmediatamente
+  const existing = stockCache.find(s =>
+    s.nombre.trim().toLowerCase() === nombre.toLowerCase() &&
+    s.deposito.trim().toLowerCase() === deposito.toLowerCase() &&
+    s.unidad === unidad
+  );
+  if (existing) {
+    existing.cantidad = Math.round((parseFloat(existing.cantidad) + cantidad) * 100) / 100;
+    msgEl.textContent = `✅ Sumado ${cantidad} ${unidad} a ${nombre} en ${deposito}. Total: ${existing.cantidad} ${unidad}`;
+  } else {
+    stockCache.push({ nombre, deposito, cantidad, unidad });
+    msgEl.textContent = `✅ ${nombre} — ${deposito}: ${cantidad} ${unidad} agregado.`;
+  }
+  msgEl.className = 'msg ok';
+  actualizarDatalist();
+  renderStock();
+
+  // Llamada al backend
+  try {
+    const url = SHEETS_URL + '?action=actualizarStockItem' +
+      '&nombre='   + encodeURIComponent(nombre) +
+      '&deposito=' + encodeURIComponent(deposito) +
+      '&unidad='   + encodeURIComponent(unidad) +
+      '&delta='    + encodeURIComponent(cantidad) +
+      '&motivo='   + encodeURIComponent('Carga manual');
+    await jsonp(url);
+  } catch(e) { msgEl.textContent += ' ⚠️ No se pudo sincronizar con el servidor.'; }
+
+  document.getElementById('sNombre').value = '';
+  document.getElementById('sDeposito').value = '';
+  document.getElementById('sCantidad').value = '';
+}
+
+async function eliminarStock(nombre, deposito, unidad) {
+  if (!confirm('¿Eliminar ' + nombre + ' — ' + deposito + ' del stock?')) return;
+  // Optimistic: remover de caché
+  stockCache = stockCache.filter(s =>
+    !(s.nombre.toLowerCase().trim() === nombre.toLowerCase().trim() &&
+      s.deposito.toLowerCase().trim() === deposito.toLowerCase().trim() &&
+      s.unidad === unidad)
+  );
+  actualizarDatalist();
+  renderStock();
+  try {
+    const url = SHEETS_URL + '?action=eliminarStockItem' +
+      '&nombre='   + encodeURIComponent(nombre) +
+      '&deposito=' + encodeURIComponent(deposito) +
+      '&unidad='   + encodeURIComponent(unidad);
+    await jsonp(url);
+  } catch(e) { /* se sincronizará en el próximo refresh */ }
+}
+
+async function ajustarCantidadStock(nombre, deposito, unidad, valorViejo, valorNuevo) {
+  const delta = Math.round((parseFloat(valorNuevo) - parseFloat(valorViejo)) * 100) / 100;
+  if (Math.abs(delta) < 0.001) return;
+  // Optimistic: actualizar caché
+  const item = stockCache.find(s =>
+    s.nombre.toLowerCase().trim() === nombre.toLowerCase().trim() &&
+    s.deposito.toLowerCase().trim() === deposito.toLowerCase().trim() &&
+    s.unidad === unidad
+  );
+  if (item) item.cantidad = Math.round(parseFloat(valorNuevo) * 100) / 100;
+  renderStock();
+  try {
+    const url = SHEETS_URL + '?action=actualizarStockItem' +
+      '&nombre='   + encodeURIComponent(nombre) +
+      '&deposito=' + encodeURIComponent(deposito) +
+      '&unidad='   + encodeURIComponent(unidad) +
+      '&delta='    + encodeURIComponent(delta) +
+      '&motivo='   + encodeURIComponent('Ajuste manual');
+    await jsonp(url);
+  } catch(e) { /* silencioso */ }
+}
+
+function renderStock() {
+  const cont  = document.getElementById('stockContainer');
+  if (!cont) return;
+  const stock = stockCache;
+  if (!stock.length) { cont.innerHTML = '<div class="empty">Sin insumos cargados. Usá el formulario de arriba para agregar.</div>'; return; }
+
+  const porDep = {};
+  stock.forEach(s => {
+    if (!porDep[s.deposito]) porDep[s.deposito] = [];
+    porDep[s.deposito].push(s);
+  });
+
+  let html = '<table class="stock-table"><thead><tr><th>Producto</th><th>Unidad</th><th style="text-align:right">Cantidad</th><th></th></tr></thead><tbody>';
+  Object.keys(porDep).sort().forEach(dep => {
+    html += `<tr class="dep-header"><td colspan="4">📦 ${escapeHtml(dep)}</td></tr>`;
+    porDep[dep].sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(s => {
+      const cls = s.cantidad < 0 ? 'stock-bajo' : s.cantidad < 10 ? 'stock-warn' : 'stock-ok';
+      const kn = escapeHtml(s.nombre), kd = escapeHtml(s.deposito), ku = escapeHtml(s.unidad);
+      html += `<tr>
+        <td>${kn}</td>
+        <td>${ku}</td>
+        <td style="text-align:right">
+          <input type="number" class="stock-cant-input ${cls}" value="${s.cantidad}" step="0.01"
+            data-old="${s.cantidad}"
+            onchange="ajustarCantidadStock('${kn}','${kd}','${ku}',parseFloat(this.dataset.old),parseFloat(this.value)); this.dataset.old=this.value;"
+            title="Editá para ajustar manualmente">
+        </td>
+        <td style="text-align:right">
+          <button onclick="eliminarStock('${kn}','${kd}','${ku}')"
+            style="background:#fdecea;color:#c0392b;border:none;border-radius:5px;padding:4px 8px;cursor:pointer;font-size:0.8rem;">🗑️</button>
+        </td>
+      </tr>`;
+    });
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+}
+
+async function renderMovimientos() {
+  const cont = document.getElementById('movContainer');
+  if (!cont) return;
+  cont.innerHTML = '<div class="empty">Cargando…</div>';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=getMovimientosStock');
+    const movs = (data.ok && data.movimientos) ? data.movimientos : [];
+    if (!movs.length) { cont.innerHTML = '<div class="empty">Sin movimientos.</div>'; return; }
+    cont.innerHTML = movs.map(m => {
+      let fechaStr = '—';
+      try { fechaStr = new Date(m.fecha).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }); } catch(e){}
+      const sign = parseFloat(m.delta) >= 0 ? '+' : '';
+      const cls  = parseFloat(m.delta) >= 0 ? 'pos' : 'neg';
+      return `<div class="mov-row">
+        <span class="mov-fecha">${fechaStr}</span>
+        <span class="mov-prod">${escapeHtml(m.nombre)}</span>
+        <span class="mov-dep">${escapeHtml(m.deposito)}</span>
+        <span class="mov-cant ${cls}">${sign}${parseFloat(m.delta).toFixed(2)} ${escapeHtml(m.unidad)}</span>
+        <span style="font-size:0.75rem;color:#5d6d7e;">${escapeHtml(m.motivo||'')}</span>
+      </div>`;
+    }).join('');
+  } catch(e) { cont.innerHTML = '<div class="empty">⚠️ No se pudieron cargar los movimientos.</div>'; }
+}
+
+// Descuenta del stock al confirmar una labor — llama al backend
+async function descontarStockPorLabor(mapaOrig, retiros, otLabel) {
+  const movimientos = [];
+  Object.keys(mapaOrig).forEach(k => {
+    const prod     = mapaOrig[k];
+    const unidBase = prod.unidad.split('/')[0];
+    (retiros[k] || []).forEach(r => {
+      const cant = parseFloat(r.cantidad) || 0;
+      if (cant <= 0) return;
+      movimientos.push({
+        nombre:   prod.nombre,
+        deposito: (r.deposito || '').trim(),
+        unidad:   unidBase,
+        cantidad: cant,
+        motivo:   'Labor ' + (otLabel || '')
+      });
+    });
+  });
+  if (!movimientos.length) return [];
+
+  // Optimistic: actualizar caché local
+  movimientos.forEach(m => {
+    const item = stockCache.find(s =>
+      s.nombre.toLowerCase().trim() === m.nombre.toLowerCase() &&
+      s.deposito.toLowerCase().trim() === m.deposito.toLowerCase() &&
+      s.unidad === m.unidad
+    );
+    if (item) item.cantidad = Math.round((item.cantidad - m.cantidad) * 100) / 100;
+  });
+  actualizarDatalist();
+
+  try {
+    const url = SHEETS_URL + '?action=descontarStockBatch&movimientos=' + encodeURIComponent(JSON.stringify(movimientos));
+    const res = await jsonp(url);
+    if (res.ok) return res.warnings || [];
+    return ['⚠️ Error al descontar stock: ' + (res.error || 'desconocido')];
+  } catch(e) {
+    return ['⚠️ No se pudo sincronizar el descuento de stock con el servidor'];
+  }
+}
+
+// ── PLANILLA ESTADO ───────────────────────────────────────────
 const CAMPOS_POR_TIPO = {
   'Fumigada':      { modo: 'productos', tipoAplicacion: true },
   'Fertilización': { modo: 'productos', tipoAplicacion: true },
   'Siembra':       { modo: 'campos', campos: [
-    { key: 'cultivoNuevo',    label: 'Cultivo sembrado', type: 'text' },
-    { key: 'variedad',        label: 'Variedad',         type: 'text' },
-    { key: 'densidad',        label: 'Densidad',         type: 'number' },
-    { key: 'unidadDensidad',  label: 'Unidad',           type: 'select', options: ['kg/ha','pl/ha','semillas/ha'] }
+    { key: 'cultivoNuevo',   label: 'Cultivo sembrado', type: 'text' },
+    { key: 'variedad',       label: 'Variedad',         type: 'text' },
+    { key: 'densidad',       label: 'Densidad',         type: 'number' },
+    { key: 'unidadDensidad', label: 'Unidad',           type: 'select', options: ['kg/ha','pl/ha','semillas/ha'] }
   ]},
   'Cosecha':       { modo: 'campos', campos: [
-    { key: 'rendimiento',        label: 'Rendimiento',  type: 'number' },
-    { key: 'unidadRendimiento',  label: 'Unidad',       type: 'select', options: ['kg/ha','qq/ha'] },
-    { key: 'humedad',            label: 'Humedad %',    type: 'number' }
+    { key: 'rendimiento',       label: 'Rendimiento', type: 'number' },
+    { key: 'unidadRendimiento', label: 'Unidad',      type: 'select', options: ['kg/ha','qq/ha'] },
+    { key: 'humedad',           label: 'Humedad %',   type: 'number' }
   ]},
   'Disco':         { modo: 'campos', campos: [
     { key: 'profundidad', label: 'Profundidad (cm)', type: 'number' },
@@ -283,25 +579,12 @@ const CAMPOS_POR_TIPO = {
 };
 
 let maestro      = { clientes: [] };
-let filas        = [];   // [{ id, campo, lote, cultivoActual, ha, productos[], detalle{}, comentario }]
-let productosConocidos = new Set(JSON.parse(localStorage.getItem('productos_conocidos') || '[]'));
-
-function actualizarDatalist() {
-  const dl = document.getElementById('productos-list');
-  if (!dl) return;
-  dl.innerHTML = [...productosConocidos].sort().map(p => `<option value="${escapeHtml(p)}">`).join('');
-}
-function guardarProductoConocido(nombre) {
-  if (!nombre || nombre.trim().length < 2) return;
-  productosConocidos.add(nombre.trim());
-  localStorage.setItem('productos_conocidos', JSON.stringify([...productosConocidos]));
-  actualizarDatalist();
-}
+let filas        = [];
 let filaCounter  = 0;
 let jsonpCounter = 0;
-let envaseSize     = {};  // { key: number }
-let acceptedTotals = {};  // { key: number }
-let retiros        = {};  // { key: [{deposito, cantidad}] }
+let envaseSize     = {};
+let acceptedTotals = {};
+let retiros        = {};
 
 // ── TRANSPORTE ────────────────────────────────────────────────
 function jsonpScript(url) {
@@ -317,9 +600,8 @@ function jsonpScript(url) {
   });
 }
 async function jsonp(url) {
-  try {
-    const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json();
-  } catch (e1) {
+  try { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+  catch (e1) {
     try { return await jsonpScript(url); }
     catch (e2) { throw new Error('No se pudo conectar (' + e1.message + ' / ' + e2.message + ')'); }
   }
@@ -452,10 +734,7 @@ function renderLotesDetalleLista() {
       <div class="lote-bloque-header">
         <div>
           <div class="lote-bloque-title">${escapeHtml(f.lote)} <span style="font-weight:400;font-size:0.82rem;opacity:0.85">— ${escapeHtml(f.campo)}</span></div>
-          <div class="lote-bloque-meta">
-            Ha: <input type="number" step="0.01" class="ha-input" value="${escapeHtml(f.ha)}" oninput="setHa('${f.id}',this.value)">
-            · ${escapeHtml(f.cultivoActual)}
-          </div>
+          <div class="lote-bloque-meta">Ha: <input type="number" step="0.01" class="ha-input" value="${escapeHtml(f.ha)}" oninput="setHa('${f.id}',this.value)"> · ${escapeHtml(f.cultivoActual)}</div>
         </div>
         <button type="button" class="btn-quitar-fila" onclick="quitarFila('${f.id}')">✕ Quitar</button>
       </div>
@@ -478,8 +757,7 @@ function copiarSelectorHtml(id) {
 function copiarDeFila(tid, sid) {
   const t = getFila(tid), s = getFila(sid);
   if (!t || !s) return;
-  t.productos = s.productos.map(p => ({...p}));
-  t.detalle   = {...s.detalle};
+  t.productos = s.productos.map(p => ({...p})); t.detalle = {...s.detalle};
   renderDetalleLote(tid); renderResumenProductos();
 }
 
@@ -489,16 +767,13 @@ function renderDetalleLote(id) {
   const el   = document.getElementById('body_' + id);
   if (!el) return;
   const f = getFila(id);
-
   const comentarioHtml = `<div class="comentario-lote">
     <label>💬 Comentario del lote</label>
     <textarea placeholder="Observaciones específicas de este lote…" oninput="setComentario('${id}',this.value)">${escapeHtml(f.comentario || '')}</textarea>
   </div>`;
-
   if (conf.modo === 'productos') {
     el.innerHTML = `${copiarSelectorHtml(id)}<div id="prods_${id}"></div>
-      <button type="button" class="btn-add-prod" onclick="agregarProducto('${id}')">➕ Agregar producto</button>
-      ${comentarioHtml}`;
+      <button type="button" class="btn-add-prod" onclick="agregarProducto('${id}')">➕ Agregar producto</button>${comentarioHtml}`;
     renderProductos(id);
   } else {
     el.innerHTML = `${copiarSelectorHtml(id)}
@@ -584,7 +859,6 @@ function renderResumenProductos() {
     const ajustado    = acceptedTotals[k] !== undefined;
     const displayTotal = ajustado ? acceptedTotals[k] : prod.total;
     const factor = calcularFactor(k, mapa);
-    // Inicializar retiro si hace falta
     if (!retiros[k]) retiros[k] = [{ deposito: '', cantidad: Math.round(displayTotal * 100) / 100 }];
 
     const filasHtml = prod.lotes.map(l => `<tr>
@@ -596,11 +870,19 @@ function renderResumenProductos() {
       <td class="num">${(l.subtotal*factor).toFixed(2)}</td>
     </tr>`).join('');
 
+    // Stock preview para este producto
+    const stock = cargarStockData();
+    const stockItems = stock.filter(s => s.nombre.trim().toLowerCase() === prod.nombre.toLowerCase() && s.unidad === unidS);
+    const stockPreview = stockItems.length
+      ? stockItems.map(s => `<span style="font-size:0.78rem;color:#5d6d7e;margin-right:8px;">📦 ${escapeHtml(s.deposito)}: <strong>${s.cantidad} ${s.unidad}</strong></span>`).join('')
+      : `<span style="font-size:0.78rem;color:#d68910;">⚠️ Sin stock cargado para este producto</span>`;
+
     return `<div class="resumen-prod-block">
       <div class="resumen-prod-titulo">
         <span>🧪 ${escapeHtml(prod.nombre)}</span>
         <span style="font-size:0.8rem;color:#5d6d7e;font-weight:400">unidad: ${escapeHtml(prod.unidad)}</span>
       </div>
+      <div style="margin-bottom:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;">Stock disponible: ${stockPreview}</div>
       <table class="resumen-table">
         <thead><tr><th>Lote (Campo)</th><th>Cultivo</th><th>Ha</th><th>Dosis cargada</th>${ajustado?'<th>Dosis ajustada</th>':''}<th>Total ${escapeHtml(unidS)}</th></tr></thead>
         <tbody>${filasHtml}
@@ -619,10 +901,11 @@ function renderResumenProductos() {
         <div id="envres-${k}">${buildEnvaseChips(k, prod.total, envase, prod.unidad, prod.lotes)}</div>
       </div>
       <div class="envase-box" style="border:1.5px solid #f5b041;background:#fef9e7;">
-        <div class="envase-label" style="margin-bottom:8px;font-size:0.88rem;color:#9a6005;">📦 ¿De dónde se retira? (Depósito / Agronomía)</div>
+        <div class="envase-label" style="margin-bottom:8px;font-size:0.88rem;color:#9a6005;">📦 ¿De dónde se retira? (el stock se descuenta de acá)</div>
         ${(retiros[k]||[]).map((r,idx) => `
           <div class="prod-row">
             <input placeholder="Depósito / Agronomía" value="${escapeHtml(r.deposito)}" style="flex:2"
+              list="depositos-list" autocomplete="off"
               oninput="actualizarRetiro('${k}',${idx},'deposito',this.value)">
             <input type="number" step="0.01" placeholder="Cantidad" value="${escapeHtml(r.cantidad)}" style="flex:1"
               oninput="actualizarRetiro('${k}',${idx},'cantidad',this.value)">
@@ -643,31 +926,25 @@ function buildEnvaseChips(k, total, envase, unidad, lotes) {
   const totUp    = envsUp * envase;
   const totDown  = envsDown * envase;
   const isExact  = Math.abs(totUp - effTotal) < 0.001;
-
-  function dosisPreview(nuevoTotal) {
+  function dosisPreview(nt) {
     if (!lotes || !lotes.length || total <= 0) return '';
-    const f = nuevoTotal / total;
+    const f = nt / total;
     return `<div style="font-size:0.72rem;color:#5d6d7e;margin-bottom:6px;line-height:1.4;">Dosis nueva por lote: ${lotes.map(l=>`${escapeHtml(l.loteId)}: ${(l.dosis*f).toFixed(3)}`).join(' · ')}</div>`;
   }
-
   if (isExact) return `<div class="opciones-row"><div class="opcion-envase" style="border-color:#27ae60">
     <div class="opcion-header">✓ Total exacto</div>
     <div class="opcion-num">${envsUp} envase${envsUp!==1?'s':''} × ${envase} ${unidS} = ${totUp.toFixed(2)} ${unidS}</div>
     <div class="opcion-pct pct-exact">Sin ajuste necesario</div>
     <button class="btn-opcion" disabled>✓ Exacto</button>
   </div></div>`;
-
-  const pctUp   = ((totUp/total-1)*100).toFixed(1);
-  const diffUp  = (totUp-total).toFixed(2);
-  let downHTML  = '';
+  const pctUp  = ((totUp/total-1)*100).toFixed(1), diffUp  = (totUp-total).toFixed(2);
+  let downHTML = '';
   if (envsDown > 0) {
-    const pctDown  = (((totDown/total)-1)*100).toFixed(1);
-    const diffDown = (totDown-total).toFixed(2);
+    const pctDown = (((totDown/total)-1)*100).toFixed(1), diffDown = (totDown-total).toFixed(2);
     downHTML = `<div class="opcion-envase">
       <div class="opcion-header">▼ Redondear para abajo</div>
       <div class="opcion-num">${envsDown} envase${envsDown!==1?'s':''} × ${envase} ${unidS} = ${totDown.toFixed(2)} ${unidS}</div>
-      <div class="opcion-pct pct-down">${pctDown}% (${diffDown} ${unidS})</div>
-      ${dosisPreview(totDown)}
+      <div class="opcion-pct pct-down">${pctDown}% (${diffDown} ${unidS})</div>${dosisPreview(totDown)}
       <button class="btn-opcion" onclick="aceptarAjuste('${k}',${totDown})">✓ Aceptar ▼</button>
     </div>`;
   }
@@ -675,11 +952,9 @@ function buildEnvaseChips(k, total, envase, unidad, lotes) {
     <div class="opcion-envase">
       <div class="opcion-header">▲ Redondear para arriba</div>
       <div class="opcion-num">${envsUp} envase${envsUp!==1?'s':''} × ${envase} ${unidS} = ${totUp.toFixed(2)} ${unidS}</div>
-      <div class="opcion-pct pct-up">+${pctUp}% (+${diffUp} ${unidS})</div>
-      ${dosisPreview(totUp)}
+      <div class="opcion-pct pct-up">+${pctUp}% (+${diffUp} ${unidS})</div>${dosisPreview(totUp)}
       <button class="btn-opcion" onclick="aceptarAjuste('${k}',${totUp})">✓ Aceptar ▲</button>
-    </div>${downHTML}
-  </div>`;
+    </div>${downHTML}</div>`;
 }
 
 function recalcEnvase(k) {
@@ -695,7 +970,6 @@ function aceptarAjuste(k, newTotal) {
   const mapa = calcularMapaProductos(); const prod = mapa[k];
   if (!prod || !newTotal || prod.total <= 0) return;
   acceptedTotals[k] = newTotal;
-  // Sincronizar retiro con el total redondeado
   const tot = Math.round(newTotal * 100) / 100;
   if (!retiros[k] || retiros[k].length === 0) {
     retiros[k] = [{ deposito: '', cantidad: tot }];
@@ -708,14 +982,10 @@ function aceptarAjuste(k, newTotal) {
 function deshacerAjuste(k) {
   const mapa = calcularMapaProductos(); const prod = mapa[k];
   delete acceptedTotals[k];
-  // Volver retiro al total original
-  if (retiros[k] && retiros[k].length === 1 && prod) {
-    retiros[k][0].cantidad = Math.round(prod.total * 100) / 100;
-  }
+  if (retiros[k] && retiros[k].length === 1 && prod) retiros[k][0].cantidad = Math.round(prod.total * 100) / 100;
   renderResumenProductos();
 }
 
-// ── RETIROS ───────────────────────────────────────────────────
 function agregarRetiro(k) {
   if (!retiros[k]) retiros[k] = [];
   const mapa  = calcularMapaProductos(); const prod = mapa[k];
@@ -730,8 +1000,8 @@ function actualizarRetiro(k, idx, campo, val) { if (retiros[k] && retiros[k][idx
 
 // ── CONFIRMAR + PDF ───────────────────────────────────────────
 async function confirmar() {
-  const btn  = document.getElementById('btnConfirmar');
-  const msg  = document.getElementById('msg');
+  const btn      = document.getElementById('btnConfirmar');
+  const msg      = document.getElementById('msg');
   const cliente  = document.getElementById('cliente').value;
   const tipo     = document.getElementById('tipo').value;
   const fecha    = document.getElementById('fecha').value;
@@ -747,14 +1017,13 @@ async function confirmar() {
   btn.disabled = true; msg.textContent = '';
 
   try {
-    const conf = CAMPOS_POR_TIPO[tipo];
+    const conf     = CAMPOS_POR_TIPO[tipo];
     const mapaOrig = calcularMapaProductos();
 
     const lotesPayload = filas.map(f => {
       const prods = conf.modo === 'productos'
         ? f.productos.filter(p => p.nombre && p.dosis && parseFloat(p.dosis)>0).map(p => {
-            const k = eKey(p.nombre, p.unidad);
-            const factor = calcularFactor(k, mapaOrig);
+            const k = eKey(p.nombre, p.unidad), factor = calcularFactor(k, mapaOrig);
             return { nombre: p.nombre, dosis: (parseFloat(p.dosis)*factor).toFixed(4), unidad: p.unidad };
           })
         : [];
@@ -789,7 +1058,6 @@ async function confirmar() {
     let y=40; hdr();
 
     if (conf.modo === 'productos') {
-      // APLICACION POR LOTE
       doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
       doc.text('APLICACION POR LOTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
@@ -804,7 +1072,6 @@ async function confirmar() {
         doc.setFont('helvetica','normal'); doc.setFontSize(9);
         doc.text(`${f.ha} ha   |   ${f.cultivoActual}`,mL+75,y+5.5);
         doc.setTextColor(0,0,0); y+=10;
-
         doc.autoTable({
           head:[['Producto','Dosis / ha','Unidad','Total']],
           body: prods.map(p => {
@@ -815,11 +1082,9 @@ async function confirmar() {
           styles:{fontSize:9,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
           headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8.5},
           columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:28,halign:'right'},2:{cellWidth:22,halign:'center'},3:{cellWidth:32,halign:'right',fontStyle:'bold'}},
-          alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain',
-          tableLineColor:[220,220,220], tableLineWidth:0.2,
+          alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
         });
         y = doc.lastAutoTable.finalY + 4;
-
         if (f.comentario && f.comentario.trim()) {
           if (y>265) { doc.addPage(); hdr(); y=40; }
           doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(90,90,90);
@@ -829,12 +1094,10 @@ async function confirmar() {
         y += 3;
       });
 
-      // RESUMEN TOTALES
       if (y>220) { doc.addPage(); hdr(); y=40; }
       doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
       doc.text('RESUMEN DE PRODUCTOS TOTALES',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
-
       const ks = Object.keys(mapaOrig);
       doc.autoTable({
         head:[['Producto','Unidad','Total neto','Tam. envase','Envases','Total a comprar','Sobrante','Retira de']],
@@ -855,12 +1118,10 @@ async function confirmar() {
           if (data.column.index===6) { data.cell.styles.textColor=data.cell.raw==='Exacto'?[27,132,73]:[154,96,5]; if(data.cell.raw==='Exacto')data.cell.styles.fontStyle='bold'; }
           if (data.column.index===4) { data.cell.styles.fillColor=[237,247,230]; data.cell.styles.textColor=VERDE; }
         },
-        alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain',
-        tableLineColor:[220,220,220], tableLineWidth:0.2,
+        alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
       });
       y = doc.lastAutoTable.finalY + 9;
 
-      // RESUMEN GESTIÓN
       if (y>220) { doc.addPage(); hdr(); y=40; }
       doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
@@ -893,7 +1154,6 @@ async function confirmar() {
         headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold'},
         alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain',
       });
-      y = doc.lastAutoTable.finalY + 9;
     }
 
     const tp=doc.getNumberOfPages();
@@ -915,7 +1175,23 @@ async function confirmar() {
     if (tipo === 'Siembra') {
       lotesPayload.forEach(l => guardarSilencioso(SHEETS_URL+'?action=guardarLote&payload='+encodeURIComponent(JSON.stringify({cliente,campo:l.campo,lote:l.lote,cultivo:l.cultivo,ha:l.ha}))));
     }
-    msg.textContent='✅ PDF guardado y labor cargada en la base de datos.'; msg.className='msg ok';
+
+    // Descontar stock
+    const stockWarnings = conf.modo === 'productos' ? await descontarStockPorLabor(mapaOrig, retiros, ot || fecha) : [];
+
+    let msgFinal = '✅ PDF guardado y labor cargada en la base de datos.';
+    if (stockWarnings.length) {
+      msgFinal += '\n\nStock: ' + stockWarnings.join(' | ');
+      msg.style.whiteSpace = 'pre-line';
+      msg.className = 'msg'; // ni ok ni err — mixto
+    } else if (conf.modo === 'productos') {
+      msgFinal += ' Stock descontado correctamente.';
+      msg.className = 'msg ok';
+    } else {
+      msg.className = 'msg ok';
+    }
+    msg.textContent = msgFinal;
+
     resetEstado(); renderLotes(); renderResumenProductos();
   } catch (err) {
     msg.textContent='⚠️ Error: '+err.message; msg.className='msg err';
@@ -936,16 +1212,15 @@ async function buscarOT() {
       msg.textContent='No se encontró la OT '+ot+'. Se creará como nueva al confirmar.'; msg.className='msg'; return;
     }
     const labor = data.labores[0];
-    if (labor.fecha)        document.getElementById('fecha').value       = labor.fecha;
-    if (labor.operador)     document.getElementById('operador').value    = labor.operador;
-    if (labor.observaciones)document.getElementById('observaciones').value = labor.observaciones;
-    if (labor.tipo)         { document.getElementById('tipo').value = labor.tipo; onTipoChange(); }
+    if (labor.fecha)         document.getElementById('fecha').value        = labor.fecha;
+    if (labor.operador)      document.getElementById('operador').value     = labor.operador;
+    if (labor.observaciones) document.getElementById('observaciones').value = labor.observaciones;
+    if (labor.tipo)          { document.getElementById('tipo').value = labor.tipo; onTipoChange(); }
     const d0 = (labor.lotes&&labor.lotes[0]&&labor.lotes[0].detalle)||{};
     if (d0.tipoAplicacion) { const el=document.getElementById('tipoAplicacion'); if(el)el.value=d0.tipoAplicacion; }
     if (labor.cliente) { document.getElementById('cliente').value=labor.cliente; onClienteChange(); }
     const pc = (labor.lotes&&labor.lotes[0]&&labor.lotes[0].campo)||labor.campo||'';
     if (pc) document.getElementById('campo').value=pc;
-
     filas=[]; filaCounter=0;
     (labor.lotes||[]).forEach(l => {
       filaCounter++;
@@ -953,8 +1228,7 @@ async function buscarOT() {
         productos:(l.productos&&l.productos.length)?l.productos.map(p=>({nombre:p.nombre,dosis:p.dosis,unidad:p.unidad})):[{nombre:'',dosis:'',unidad:'L/ha'}],
         detalle:l.detalle||{}, comentario:l.comentario||'' });
     });
-    resetEstado(); filas.forEach((_,i)=>{ /* retiros se re-inicia en renderResumen */ });
-    renderLotes(); renderResumenProductos();
+    resetEstado(); renderLotes(); renderResumenProductos();
     msg.textContent='✅ OT '+ot+' cargada — modificá lo que necesites y confirmá para actualizarla.'; msg.className='msg ok';
   } catch(err) { msg.textContent='⚠️ '+err.message; msg.className='msg err'; }
 }
@@ -968,10 +1242,13 @@ function sugerirOT() {
 }
 function sugerirOTSiVacia() { if(!document.getElementById('ot').value.trim()) sugerirOT(); }
 
+// ── INIT ──────────────────────────────────────────────────────
 document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
 actualizarDatalist();
 cargarMaestro();
 sugerirOT();
+// Cargar stock inicial desde el servidor (en segundo plano)
+refreshStockCache().then(() => { renderResumenProductos(); });
 </script>
 </body>
 </html>
