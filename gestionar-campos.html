@@ -47,6 +47,12 @@
   .btn-secondary {
     background: #eef4fa; color: #1a5276; border: 1.5px solid #d6eaf8;
   }
+  .btn-danger {
+    background: #fdf2f2; color: #c0392b; border: 1.5px solid #f5c6c6;
+    font-size: 0.8rem; padding: 5px 10px; border-radius: 6px;
+    cursor: pointer; font-weight: 600; width: auto; margin: 0;
+  }
+  .btn-danger:hover { background: #fbe4e4; }
   .msg { margin-top: 10px; font-size: 0.85rem; font-weight: 600; text-align: center; }
   .msg.ok { color: #27ae60; }
   .msg.err { color: #c0392b; }
@@ -59,24 +65,26 @@
   th { color: #5d6d7e; font-weight: 600; text-transform: uppercase; font-size: 0.7rem; }
   .edit-link { color: #2e86c1; cursor: pointer; font-size: 0.78rem; font-weight: 600; }
   .empty, .loading { text-align: center; padding: 30px; color: #5d6d7e; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
   .tab-btn {
-    flex: 1; padding: 8px; border-radius: 8px; border: 1.5px solid #d5d8dc; background: #fff;
-    cursor: pointer; font-size: 0.85rem; font-weight: 600; color: #5d6d7e;
+    flex: 1; padding: 8px 6px; border-radius: 8px; border: 1.5px solid #d5d8dc; background: #fff;
+    cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #5d6d7e; min-width: 60px;
   }
   .tab-btn.active { background: #1a5276; color: white; border-color: #1a5276; }
   .panel { display: none; }
   .panel.active { display: block; }
-  .campos-check-list {
-    max-height: 220px; overflow-y: auto; border: 1.5px solid #d5d8dc;
-    border-radius: 8px; padding: 8px 10px; background: #fafcfe; margin-top: 4px;
+
+  /* Emails panel styles */
+  .email-list { margin-top: 14px; }
+  .email-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border: 1px solid #d6eaf8; border-radius: 8px;
+    margin-bottom: 8px; background: #f8fbff; gap: 8px;
   }
-  .campos-check-grupo { margin-bottom: 10px; }
-  .campos-check-grupo-title { font-size: 0.75rem; font-weight: 700; color: #1a5276; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-  .campos-check-item { display: flex; align-items: center; gap: 7px; padding: 3px 0; font-size: 0.88rem; cursor: pointer; }
-  .campos-check-item input[type=checkbox] { accent-color: #1a5276; width: 15px; height: 15px; cursor: pointer; }
-  .campos-check-empty { color: #5d6d7e; font-size: 0.83rem; padding: 6px 0; }
-  .acceso-total-badge { font-size: 0.78rem; color: #27ae60; font-weight: 600; margin-top: 4px; }
+  .email-item-info { flex: 1; min-width: 0; }
+  .email-item-cliente { font-size: 0.72rem; font-weight: 700; color: #2e86c1; text-transform: uppercase; letter-spacing: 0.03em; }
+  .email-item-email { font-size: 0.88rem; color: #1a202c; word-break: break-all; }
+  .email-empty { text-align: center; color: #aaa; font-size: 0.85rem; padding: 16px 0; }
 </style>
 </head>
 <body>
@@ -96,6 +104,7 @@
         <button class="tab-btn active" id="tabAgregar" onclick="cambiarTab('agregar')">➕ Agregar</button>
         <button class="tab-btn" id="tabEditar" onclick="cambiarTab('editar')">✏️ Rotación</button>
         <button class="tab-btn" id="tabUsuarios" onclick="cambiarTab('usuarios')">🔑 Usuarios</button>
+        <button class="tab-btn" id="tabEmails" onclick="cambiarTab('emails')">📧 Emails</button>
       </div>
 
       <!-- PANEL AGREGAR -->
@@ -187,20 +196,36 @@
           <label>Contraseña</label>
           <input type="password" id="us_password" autocomplete="new-password">
         </div>
-        <!-- PANEL CAMPOS PERMITIDOS (solo operadores) -->
-        <div class="field" id="us_camposField" style="display:none;">
-          <label>Campos con acceso</label>
-          <div class="campos-check-list" id="us_camposCheckList">
-            <div class="campos-check-empty">Cargando campos…</div>
-          </div>
-          <div class="acceso-total-badge" id="us_accesoTotalBadge">✅ Sin restricción: acceso a todos los campos</div>
-        </div>
         <button class="btn" id="btnUsuario" onclick="crearUsuario()">🔑 Crear acceso</button>
         <div class="msg" id="msgUsuario"></div>
         <div style="margin-top:14px;font-size:0.78rem;color:#5d6d7e;" id="us_ayuda">
           Compartile al cliente el link de <code>login.html</code> con este usuario y contraseña. Va a ver solo los datos de su cliente.
         </div>
       </div>
+
+      <!-- PANEL EMAILS -->
+      <div class="panel" id="panelEmails">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="em_clienteSelect">
+            <option value="">Seleccionar…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Email de notificación</label>
+          <input type="email" id="em_email" placeholder="Ej: cliente@empresa.com" autocomplete="off">
+        </div>
+        <button class="btn" id="btnEmail" onclick="agregarEmail()">📧 Agregar email</button>
+        <div class="msg" id="msgEmail"></div>
+        <div style="margin-top:6px;font-size:0.78rem;color:#5d6d7e;">
+          Cada vez que se genere una OT para ese cliente, le va a llegar un email con el PDF adjunto.
+        </div>
+
+        <div class="email-list" id="emailList">
+          <div class="loading" style="padding:16px 0;">Cargando…</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -217,6 +242,7 @@
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
 
 let maestro = { clientes: [] };
+let emailsNotif = []; // lista de { cliente, email }
 let jsonpCounter = 0;
 
 function jsonpScript(url) {
@@ -257,12 +283,11 @@ function escapeHtml(str) {
 }
 
 function cambiarTab(tab) {
-  document.getElementById('tabAgregar').classList.toggle('active', tab === 'agregar');
-  document.getElementById('tabEditar').classList.toggle('active', tab === 'editar');
-  document.getElementById('tabUsuarios').classList.toggle('active', tab === 'usuarios');
-  document.getElementById('panelAgregar').classList.toggle('active', tab === 'agregar');
-  document.getElementById('panelEditar').classList.toggle('active', tab === 'editar');
-  document.getElementById('panelUsuarios').classList.toggle('active', tab === 'usuarios');
+  const tabs = ['agregar', 'editar', 'usuarios', 'emails'];
+  tabs.forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+  });
 }
 
 async function hashSHA256(texto) {
@@ -277,52 +302,19 @@ function poblarSelectUsuarios() {
     maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
 }
 
+function poblarSelectEmails() {
+  const sel = document.getElementById('em_clienteSelect');
+  sel.innerHTML = '<option value="">Seleccionar…</option>' +
+    maestro.clientes.map(c => `<option value="${escapeHtml(c.cliente)}">${escapeHtml(c.cliente)}</option>`).join('');
+}
+
 function onRolChange() {
   const rol = document.getElementById('us_rol').value;
   const esCliente = rol === 'cliente';
   document.getElementById('us_clienteField').style.display = esCliente ? 'block' : 'none';
-  document.getElementById('us_camposField').style.display = esCliente ? 'none' : 'block';
-  if (!esCliente) renderCamposCheck();
   document.getElementById('us_ayuda').innerHTML = esCliente
     ? 'Compartile al cliente el link de <code>login.html</code> con este usuario y contraseña. Va a ver solo los datos de su cliente.'
-    : 'Compartile al operador el link de <code>staff-login.html</code> con este usuario y contraseña. Sin campos seleccionados tendrá acceso a todos; si seleccionás campos, solo verá esos.';
-}
-
-function renderCamposCheck() {
-  const container = document.getElementById('us_camposCheckList');
-  const badge = document.getElementById('us_accesoTotalBadge');
-  if (!maestro.clientes || maestro.clientes.length === 0) {
-    container.innerHTML = '<div class="campos-check-empty">No hay campos cargados todavía.</div>';
-    badge.style.display = 'block';
-    return;
-  }
-  let html = '';
-  maestro.clientes.forEach(c => {
-    if (!c.campos || c.campos.length === 0) return;
-    html += `<div class="campos-check-grupo">
-      <div class="campos-check-grupo-title">${escapeHtml(c.cliente)}</div>`;
-    c.campos.forEach(cp => {
-      const key = encodeURIComponent(c.cliente) + '||' + encodeURIComponent(cp.campo);
-      html += `<label class="campos-check-item">
-        <input type="checkbox" class="us_campoCheck" data-cliente="${escapeHtml(c.cliente)}" data-campo="${escapeHtml(cp.campo)}" onchange="onCampoCheckChange()">
-        ${escapeHtml(cp.campo)}
-      </label>`;
-    });
-    html += '</div>';
-  });
-  container.innerHTML = html || '<div class="campos-check-empty">No hay campos cargados todavía.</div>';
-  onCampoCheckChange();
-}
-
-function onCampoCheckChange() {
-  const checks = document.querySelectorAll('.us_campoCheck:checked');
-  const badge = document.getElementById('us_accesoTotalBadge');
-  badge.style.display = checks.length === 0 ? 'block' : 'none';
-}
-
-function getCamposSeleccionados() {
-  const checks = document.querySelectorAll('.us_campoCheck:checked');
-  return Array.from(checks).map(ch => ({ cliente: ch.dataset.cliente, campo: ch.dataset.campo }));
+    : 'Compartile al operador el link de <code>staff-login.html</code> con este usuario y contraseña. Va a poder cargar labores para cualquier cliente/campo, y quedará registrado con su usuario.';
 }
 
 async function crearUsuario() {
@@ -348,17 +340,13 @@ async function crearUsuario() {
   msg.textContent = '';
   try {
     const hash = await hashSHA256(password);
-    const camposPermitidos = rol === 'operador' ? getCamposSeleccionados() : [];
-    const payload = JSON.stringify({ usuario, hash, cliente: rol === 'cliente' ? cliente : '', rol, camposPermitidos });
+    const payload = JSON.stringify({ usuario, hash, cliente: rol === 'cliente' ? cliente : '', rol });
     const url = SHEETS_URL + '?action=crearUsuario&payload=' + encodeURIComponent(payload);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    const camposMsg = (rol === 'operador' && camposPermitidos.length > 0)
-      ? ` · Campos: ${camposPermitidos.map(c => c.campo).join(', ')}`
-      : (rol === 'operador' ? ' · Acceso a todos los campos.' : '');
     msg.textContent = rol === 'cliente'
       ? `✅ Acceso creado para "${usuario}" (cliente: ${cliente}).`
-      : `✅ Operador "${usuario}" creado.${camposMsg}`;
+      : `✅ Acceso de operador creado para "${usuario}".`;
     msg.className = 'msg ok';
     document.getElementById('us_usuario').value = '';
     document.getElementById('us_password').value = '';
@@ -370,6 +358,89 @@ async function crearUsuario() {
   }
 }
 
+// ── EMAILS DE NOTIFICACIÓN ─────────────────────────────────────
+
+async function cargarEmailsNotif() {
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=obtenerEmailsNotif');
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    emailsNotif = data.emails || [];
+    renderEmailsNotif();
+  } catch (err) {
+    document.getElementById('emailList').innerHTML =
+      '<div class="email-empty">⚠️ No se pudieron cargar los emails: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function renderEmailsNotif() {
+  const el = document.getElementById('emailList');
+  if (!emailsNotif.length) {
+    el.innerHTML = '<div class="email-empty">Todavía no hay emails de notificación registrados.</div>';
+    return;
+  }
+  el.innerHTML = emailsNotif.map(e => `
+    <div class="email-item">
+      <div class="email-item-info">
+        <div class="email-item-cliente">${escapeHtml(e.cliente)}</div>
+        <div class="email-item-email">📧 ${escapeHtml(e.email)}</div>
+      </div>
+      <button class="btn-danger" onclick="eliminarEmail('${escapeHtml(e.cliente)}', '${escapeHtml(e.email)}')">✕ Quitar</button>
+    </div>
+  `).join('');
+}
+
+async function agregarEmail() {
+  const btn = document.getElementById('btnEmail');
+  const msg = document.getElementById('msgEmail');
+  const cliente = document.getElementById('em_clienteSelect').value;
+  const email = document.getElementById('em_email').value.trim();
+
+  if (!cliente || !email) {
+    msg.textContent = '⚠️ Seleccioná un cliente e ingresá un email.';
+    msg.className = 'msg err';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    msg.textContent = '⚠️ El email no tiene un formato válido.';
+    msg.className = 'msg err';
+    return;
+  }
+
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const payload = JSON.stringify({ cliente, email, accion: 'agregar' });
+    const url = SHEETS_URL + '?action=guardarEmailNotif&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    msg.textContent = `✅ Email registrado para ${cliente}.`;
+    msg.className = 'msg ok';
+    document.getElementById('em_email').value = '';
+    document.getElementById('em_clienteSelect').value = '';
+    await cargarEmailsNotif();
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function eliminarEmail(cliente, email) {
+  if (!confirm(`¿Quitar el email "${email}" para ${cliente}?`)) return;
+  try {
+    const payload = JSON.stringify({ cliente, email, accion: 'eliminar' });
+    const url = SHEETS_URL + '?action=guardarEmailNotif&payload=' + encodeURIComponent(payload);
+    const data = await jsonp(url);
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    await cargarEmailsNotif();
+  } catch (err) {
+    alert('⚠️ ' + err.message);
+  }
+}
+
+// ── MAESTRO ────────────────────────────────────────────────────
+
 async function cargarMaestro() {
   try {
     const data = await jsonp(SHEETS_URL + '?action=maestro');
@@ -378,6 +449,7 @@ async function cargarMaestro() {
     poblarSelectsAgregar();
     poblarSelectsEditar();
     poblarSelectUsuarios();
+    poblarSelectEmails();
     renderArbol();
   } catch (err) {
     document.getElementById('arbol').innerHTML = '<div class="empty">⚠️ ' + escapeHtml(err.message) + '</div>';
@@ -543,7 +615,9 @@ async function guardarEdicion() {
   }
 }
 
+// Carga inicial
 cargarMaestro();
+cargarEmailsNotif();
 </script>
 </body>
 </html>
