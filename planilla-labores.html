@@ -608,6 +608,13 @@ async function jsonp(url) {
 }
 function guardarSilencioso(url) { new Image().src = url; }
 
+function formatDosis(val) {
+  if (val == null || val === '') return '';
+  const n = parseFloat(String(val).replace(',', '.'));
+  if (isNaN(n)) { const d = document.createElement('div'); d.textContent = String(val); return d.innerHTML; }
+  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
 function escapeHtml(str) {
   const d = document.createElement('div');
   d.textContent = str == null ? '' : String(str);
@@ -652,7 +659,7 @@ function getFila(id) { return filas.find(f => f.id === id); }
 
 async function cargarMaestro() {
   try {
-    const data = await jsonp(SHEETS_URL + '?action=maestro');
+    const data = await jsonp(SHEETS_URL + '?action=maestro&token=' + encodeURIComponent(staffToken));
     if (!data.ok) throw new Error(data.error || 'Error');
     maestro = data;
     const sel = document.getElementById('cliente');
@@ -808,7 +815,7 @@ function renderProductos(id) {
         list="productos-list" autocomplete="off"
         oninput="getFila('${id}').productos[${i}].nombre=this.value; renderResumenProductos();"
         onblur="guardarProductoConocido(this.value);">
-      <input class="p-dosis" type="number" step="0.01" placeholder="Dosis" value="${escapeHtml(p.dosis)}"
+      <input class="p-dosis" type="number" step="0.01" placeholder="Dosis" value="${formatDosis(p.dosis)}"
         oninput="getFila('${id}').productos[${i}].dosis=this.value; renderResumenProductos();">
       <select class="p-unidad" onchange="getFila('${id}').productos[${i}].unidad=this.value; renderResumenProductos();">
         ${UNIDADES_PRODUCTO.map(u=>`<option ${u===p.unidad?'selected':''}>${u}</option>`).join('')}

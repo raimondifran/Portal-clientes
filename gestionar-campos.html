@@ -85,6 +85,30 @@
   .email-item-cliente { font-size: 0.72rem; font-weight: 700; color: #2e86c1; text-transform: uppercase; letter-spacing: 0.03em; }
   .email-item-email { font-size: 0.88rem; color: #1a202c; word-break: break-all; }
   .email-empty { text-align: center; color: #aaa; font-size: 0.85rem; padding: 16px 0; }
+
+  /* Operador permisos */
+  .op-item {
+    border: 1px solid #d6eaf8; border-radius: 8px; padding: 10px 12px;
+    margin-bottom: 10px; background: #f8fbff;
+  }
+  .op-item-header { font-size: 0.85rem; font-weight: 700; color: #1a5276; margin-bottom: 8px; }
+  .op-clientes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .op-check-label {
+    display: flex; align-items: center; gap: 4px; cursor: pointer;
+    font-size: 0.8rem; background: #eef4fa; border-radius: 16px;
+    padding: 3px 10px; border: 1px solid #d6eaf8; user-select: none;
+  }
+  .op-check-label input { cursor: pointer; }
+  .op-check-label.checked { background: #1a5276; color: white; border-color: #1a5276; }
+  .btn-op-save {
+    background: #1a5276; color: white; border: none; border-radius: 6px;
+    padding: 5px 14px; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-op-save:disabled { opacity: 0.6; cursor: not-allowed; }
+  .op-msg { font-size: 0.76rem; font-weight: 600; margin-left: 8px; }
+  .op-msg.ok { color: #27ae60; }
+  .op-msg.err { color: #c0392b; }
+  .op-empty { font-size: 0.82rem; color: #aaa; padding: 6px 0; }
 </style>
 </head>
 <body>
@@ -201,6 +225,13 @@
         <div style="margin-top:14px;font-size:0.78rem;color:#5d6d7e;" id="us_ayuda">
           Compartile al cliente el link de <code>login.html</code> con este usuario y contraseña. Va a ver solo los datos de su cliente.
         </div>
+
+        <!-- PERMISOS DE OPERADORES -->
+        <div style="margin-top:20px; border-top:1.5px solid #d6eaf8; padding-top:16px;">
+          <div style="font-size:0.85rem; font-weight:700; color:#1a5276; margin-bottom:10px;">🔒 Permisos de operadores</div>
+          <div style="font-size:0.76rem;color:#5d6d7e;margin-bottom:10px;">Elegí qué clientes puede ver cada operador. Sin selección = ve todos.</div>
+          <div id="listaOperadores"><div class="loading" style="padding:8px 0;font-size:0.85rem;">Cargando…</div></div>
+        </div>
       </div>
 
       <!-- PANEL EMAILS -->
@@ -288,6 +319,7 @@ function cambiarTab(tab) {
     document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
     document.getElementById('panel' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
   });
+  if (tab === 'usuarios') cargarOperadores();
 }
 
 async function hashSHA256(texto) {
@@ -610,6 +642,81 @@ async function guardarEdicion() {
   } catch (err) {
     msg.textContent = '⚠️ ' + err.message;
     msg.className = 'msg err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── PERMISOS DE OPERADORES ────────────────────────────────────
+
+let operadoresData = [];
+
+async function cargarOperadores() {
+  const el = document.getElementById('listaOperadores');
+  el.innerHTML = '<div class="loading" style="padding:8px 0;font-size:0.85rem;">Cargando…</div>';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=getOperadores');
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    operadoresData = data.operadores || [];
+    renderOperadores();
+  } catch (err) {
+    el.innerHTML = '<div class="op-empty">⚠️ ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function renderOperadores() {
+  const el = document.getElementById('listaOperadores');
+  if (!operadoresData.length) {
+    el.innerHTML = '<div class="op-empty">No hay operadores registrados todavía.</div>';
+    return;
+  }
+  el.innerHTML = operadoresData.map((op, idx) => {
+    const checkboxes = maestro.clientes.map(c => {
+      const checked = op.clientesPermitidos.includes(c.cliente);
+      return `<label class="op-check-label${checked ? ' checked' : ''}" id="lbl_${idx}_${escapeHtml(c.cliente)}">
+        <input type="checkbox" data-op="${idx}" data-cliente="${escapeHtml(c.cliente)}" ${checked ? 'checked' : ''} onchange="onOpCheckChange(this)">
+        ${escapeHtml(c.cliente)}
+      </label>`;
+    }).join('');
+    return `
+      <div class="op-item" id="opItem_${idx}">
+        <div class="op-item-header">👷 ${escapeHtml(op.usuario)}</div>
+        <div class="op-clientes" id="opClientes_${idx}">
+          ${checkboxes || '<span style="font-size:0.78rem;color:#aaa;">Sin clientes cargados</span>'}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn-op-save" id="btnOpSave_${idx}" onclick="guardarPermisosOp(${idx})">💾 Guardar</button>
+          <span class="op-msg" id="opMsg_${idx}"></span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function onOpCheckChange(checkbox) {
+  const lbl = checkbox.closest('label');
+  lbl.classList.toggle('checked', checkbox.checked);
+}
+
+async function guardarPermisosOp(idx) {
+  const op = operadoresData[idx];
+  const btn = document.getElementById('btnOpSave_' + idx);
+  const msg = document.getElementById('opMsg_' + idx);
+  const checkboxes = document.querySelectorAll(`input[data-op="${idx}"]`);
+  const clientes = Array.from(checkboxes).filter(c => c.checked).map(c => c.dataset.cliente);
+
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const payload = JSON.stringify({ usuario: op.usuario, clientes });
+    const data = await jsonp(SHEETS_URL + '?action=guardarPermisosOperador&payload=' + encodeURIComponent(payload));
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    operadoresData[idx].clientesPermitidos = clientes;
+    msg.textContent = '✅ Guardado';
+    msg.className = 'op-msg ok';
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+  } catch (err) {
+    msg.textContent = '⚠️ ' + err.message;
+    msg.className = 'op-msg err';
   } finally {
     btn.disabled = false;
   }
