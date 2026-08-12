@@ -1185,6 +1185,14 @@ async function confirmar() {
       if (/sesión|iniciar sesión/i.test(res.error||'')) { cerrarSesionStaff(); return; }
       throw new Error(res.error||'No se pudo guardar');
     }
+    // Guardar OT → laborId en localStorage para poder recuperar OTs viejas
+    if (ot && res.laborId) {
+      try {
+        const reg = JSON.parse(localStorage.getItem('otRegistry') || '{}');
+        reg[ot] = res.laborId;
+        localStorage.setItem('otRegistry', JSON.stringify(reg));
+      } catch(e) {}
+    }
     if (tipo === 'Siembra') {
       lotesPayload.forEach(l => guardarSilencioso(SHEETS_URL+'?action=guardarLote&payload='+encodeURIComponent(JSON.stringify({cliente,campo:l.campo,lote:l.lote,cultivo:l.cultivo,ha:l.ha}))));
     }
@@ -1220,14 +1228,30 @@ async function buscarOT() {
   if (!ot) return;
   msg.textContent='🔍 Buscando OT '+ot+'…'; msg.className='msg';
   try {
-    // Usamos getOT con laborId = el número ingresado (o su mapeo en localStorage)
-    const reg = (() => { try { return JSON.parse(localStorage.getItem('otRegistry') || '{}'); } catch { return {}; } })();
-    const laborId = reg[ot] || ot;
-    const data = await jsonp(SHEETS_URL+'?action=getOT&laborId='+encodeURIComponent(laborId));
-    if (!data.ok || !data.labor) {
+    let labor = null;
+
+    // 1. Buscar en backend por número de OT (registros nuevos)
+    const data = await jsonp(SHEETS_URL+'?action=buscarPorOT&ot='+encodeURIComponent(ot));
+    if (data.ok) {
+      const lista = data.labores || (data.labor ? [data.labor] : null);
+      if (lista && lista.length) labor = lista[0];
+    }
+
+    // 2. Fallback: buscar en localStorage (registros guardados antes del nuevo sistema)
+    if (!labor) {
+      try {
+        const reg = JSON.parse(localStorage.getItem('otRegistry') || '{}');
+        const laborId = reg[ot];
+        if (laborId) {
+          const data2 = await jsonp(SHEETS_URL+'?action=getOT&laborId='+encodeURIComponent(laborId));
+          if (data2.ok && data2.labor) labor = data2.labor;
+        }
+      } catch(e) {}
+    }
+
+    if (!labor) {
       msg.textContent='No se encontró la OT '+ot+'. Se creará como nueva al confirmar.'; msg.className='msg'; return;
     }
-    const labor = data.labor;
 
     // Bloquear onClienteChange/onTipoChange para que no limpien filas
     _cargandoOT = true;
