@@ -115,6 +115,23 @@
   .comentario-lote label { display: block; font-size: 0.75rem; font-weight: 600; color: #5d6d7e; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
   .comentario-lote textarea { width: 100%; padding: 8px 10px; border: 1.5px solid #d5d8dc; border-radius: 7px; font-size: 0.88rem; color: #1a202c; resize: vertical; min-height: 52px; font-family: inherit; }
 
+  /* SIEMBRA — curasemilla / fertilizante */
+  .siembra-basic-fields { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .siembra-basic-fields .form-group { min-width: 120px; flex: 1; }
+  .siembra-section {
+    border: 1.5px solid #d6eaf8; border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 12px; background: #f8fbff;
+  }
+  .siembra-section-title {
+    font-size: 0.82rem; font-weight: 700; color: #1a5276;
+    margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .siembra-prov-label {
+    font-size: 0.76rem; font-weight: 600; color: #5d6d7e;
+    text-transform: uppercase; letter-spacing: 0.03em; margin: 8px 0 5px;
+    border-top: 1px solid #d6eaf8; padding-top: 8px;
+  }
+
   /* STOCK */
   .stock-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
   .stock-table th { background: #1a5276; color: white; padding: 9px 12px; text-align: left; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -327,7 +344,9 @@ function showTab(name) {
 }
 
 // ── AUTOCOMPLETE ──────────────────────────────────────────────
-const UNIDADES_PRODUCTO = ['L/ha','kg/ha','cc/ha','g/ha'];
+const UNIDADES_PRODUCTO    = ['L/ha','kg/ha','cc/ha','g/ha'];
+const UNIDADES_CURASEMILLA = ['cc/100kg','L/100kg','g/100kg','kg/100kg','cc/ha','L/ha'];
+const UNIDADES_FERTILIZANTE = ['kg/ha','L/ha','kg/tn','g/ha','cc/ha'];
 let productosConocidos = new Set(JSON.parse(localStorage.getItem('productos_conocidos') || '[]'));
 
 function actualizarDatalist() {
@@ -557,7 +576,7 @@ async function descontarStockPorLabor(mapaOrig, retiros, otLabel) {
 const CAMPOS_POR_TIPO = {
   'Fumigada':      { modo: 'productos', tipoAplicacion: true },
   'Fertilización': { modo: 'productos', tipoAplicacion: true },
-  'Siembra':       { modo: 'campos', campos: [
+  'Siembra':       { modo: 'siembra', campos: [
     { key: 'cultivoNuevo',   label: 'Cultivo sembrado', type: 'text' },
     { key: 'variedad',       label: 'Variedad',         type: 'text' },
     { key: 'densidad',       label: 'Densidad',         type: 'number' },
@@ -769,8 +788,85 @@ function copiarSelectorHtml(id) {
 function copiarDeFila(tid, sid) {
   const t = getFila(tid), s = getFila(sid);
   if (!t || !s) return;
-  t.productos = s.productos.map(p => ({...p})); t.detalle = {...s.detalle};
+  t.productos = s.productos.map(p => ({...p}));
+  t.detalle = JSON.parse(JSON.stringify(s.detalle)); // deep copy para arrays de siembra
   renderDetalleLote(tid); renderResumenProductos();
+}
+
+// ── SIEMBRA: curasemilla + fertilizante ───────────────────────
+function initSiembraDetalle(f) {
+  if (!f.detalle.curasemillas)          f.detalle.curasemillas          = [{ nombre: '', dosis: '', unidad: 'cc/100kg' }];
+  if (!f.detalle.curasemillaProveedores) f.detalle.curasemillaProveedores = [''];
+  if (!f.detalle.fertilizantes)         f.detalle.fertilizantes         = [{ nombre: '', dosis: '', unidad: 'kg/ha' }];
+  if (!f.detalle.fertilizanteProveedores) f.detalle.fertilizanteProveedores = [''];
+  if (f.detalle.unidadDensidad === undefined) f.detalle.unidadDensidad = 'kg/ha';
+  if (f.detalle.cultivoNuevo === undefined)   f.detalle.cultivoNuevo   = f.cultivoActual || '';
+}
+
+function buildSiembraSeccion(id, tipo, items, proveedores, unidades) {
+  const titulo = tipo === 'cura' ? '🌱 Curasemilla / Inoculante' : '🌾 Fertilizante';
+  const itemsHtml = items.map((it, i) => `
+    <div class="prod-row">
+      <input class="p-nombre" placeholder="Nombre / producto" value="${escapeHtml(it.nombre)}"
+        oninput="setSiembraItem('${id}','${tipo}',${i},'nombre',this.value)">
+      <input class="p-dosis" type="number" step="0.0001" placeholder="Dosis" value="${it.dosis !== '' && it.dosis != null ? parseFloat(String(it.dosis).replace(',','.')) || '' : ''}"
+        oninput="setSiembraItem('${id}','${tipo}',${i},'dosis',this.value)">
+      <select class="p-unidad" onchange="setSiembraItem('${id}','${tipo}',${i},'unidad',this.value)">
+        ${unidades.map(u => `<option ${u===it.unidad?'selected':''}>${u}</option>`).join('')}
+      </select>
+      <button type="button" class="p-del" onclick="quitarSiembraItem('${id}','${tipo}',${i})">✕</button>
+    </div>`).join('');
+  const provHtml = proveedores.map((p, i) => `
+    <div class="prod-row">
+      <input placeholder="Agronomía / proveedor" value="${escapeHtml(p)}" style="flex:3"
+        oninput="setSiembraProveedor('${id}','${tipo}',${i},this.value)">
+      <button type="button" class="p-del" onclick="quitarSiembraProveedor('${id}','${tipo}',${i})">✕</button>
+    </div>`).join('');
+  return `<div class="siembra-section">
+    <div class="siembra-section-title">${titulo}</div>
+    <div>${itemsHtml}</div>
+    <button type="button" class="btn-add-prod" onclick="agregarSiembraItem('${id}','${tipo}')">➕ Agregar</button>
+    <div class="siembra-prov-label">📦 Proveedor(es) donde se retira:</div>
+    <div>${provHtml}</div>
+    <button type="button" class="btn-add-prod" onclick="agregarSiembraProveedor('${id}','${tipo}')">➕ Proveedor</button>
+  </div>`;
+}
+
+function setSiembraItem(id, tipo, idx, campo, val) {
+  const f = getFila(id); if (!f) return;
+  const arr = tipo === 'cura' ? f.detalle.curasemillas : f.detalle.fertilizantes;
+  if (arr && arr[idx]) arr[idx][campo] = val;
+}
+function setSiembraProveedor(id, tipo, idx, val) {
+  const f = getFila(id); if (!f) return;
+  const arr = tipo === 'cura' ? f.detalle.curasemillaProveedores : f.detalle.fertilizanteProveedores;
+  if (arr) arr[idx] = val;
+}
+function agregarSiembraItem(id, tipo) {
+  const f = getFila(id); if (!f) return;
+  const defUnit = tipo === 'cura' ? 'cc/100kg' : 'kg/ha';
+  (tipo === 'cura' ? f.detalle.curasemillas : f.detalle.fertilizantes).push({ nombre: '', dosis: '', unidad: defUnit });
+  renderDetalleLote(id);
+}
+function quitarSiembraItem(id, tipo, idx) {
+  const f = getFila(id); if (!f) return;
+  const arr = tipo === 'cura' ? f.detalle.curasemillas : f.detalle.fertilizantes;
+  const defUnit = tipo === 'cura' ? 'cc/100kg' : 'kg/ha';
+  arr.splice(idx, 1);
+  if (!arr.length) arr.push({ nombre: '', dosis: '', unidad: defUnit });
+  renderDetalleLote(id);
+}
+function agregarSiembraProveedor(id, tipo) {
+  const f = getFila(id); if (!f) return;
+  (tipo === 'cura' ? f.detalle.curasemillaProveedores : f.detalle.fertilizanteProveedores).push('');
+  renderDetalleLote(id);
+}
+function quitarSiembraProveedor(id, tipo, idx) {
+  const f = getFila(id); if (!f) return;
+  const arr = tipo === 'cura' ? f.detalle.curasemillaProveedores : f.detalle.fertilizanteProveedores;
+  arr.splice(idx, 1);
+  if (!arr.length) arr.push('');
+  renderDetalleLote(id);
 }
 
 function renderDetalleLote(id) {
@@ -787,6 +883,24 @@ function renderDetalleLote(id) {
     el.innerHTML = `${copiarSelectorHtml(id)}<div id="prods_${id}"></div>
       <button type="button" class="btn-add-prod" onclick="agregarProducto('${id}')">➕ Agregar producto</button>${comentarioHtml}`;
     renderProductos(id);
+  } else if (conf.modo === 'siembra') {
+    initSiembraDetalle(f);
+    const basicHtml = conf.campos.map(c => {
+      const val = c.key === 'cultivoNuevo' ? (f.detalle.cultivoNuevo !== undefined ? f.detalle.cultivoNuevo : f.cultivoActual||'') : (f.detalle[c.key] !== undefined ? f.detalle[c.key] : '');
+      if (c.type === 'select') return `<div class="form-group"><label>${c.label}</label>
+        <select onchange="setDetalle('${id}','${c.key}',this.value)">${c.options.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+      return `<div class="form-group"><label>${c.label}</label>
+        <input type="${c.type}" value="${escapeHtml(val)}" oninput="setDetalle('${id}','${c.key}',this.value)"></div>`;
+    }).join('');
+    conf.campos.forEach(c => {
+      if (c.type === 'select' && f.detalle[c.key] === undefined) f.detalle[c.key] = c.options[0];
+      if (c.key === 'cultivoNuevo' && f.detalle[c.key] === undefined) f.detalle[c.key] = f.cultivoActual || '';
+    });
+    el.innerHTML = `${copiarSelectorHtml(id)}
+      <div class="siembra-basic-fields">${basicHtml}</div>
+      ${buildSiembraSeccion(id, 'cura', f.detalle.curasemillas, f.detalle.curasemillaProveedores, UNIDADES_CURASEMILLA)}
+      ${buildSiembraSeccion(id, 'fert', f.detalle.fertilizantes, f.detalle.fertilizanteProveedores, UNIDADES_FERTILIZANTE)}
+      ${comentarioHtml}`;
   } else {
     el.innerHTML = `${copiarSelectorHtml(id)}
       <div class="campos-tipo">${conf.campos.map(c => {
@@ -1039,9 +1153,10 @@ async function confirmar() {
             return { nombre: p.nombre, dosis: (parseFloat(p.dosis)*factor).toFixed(4), unidad: p.unidad };
           })
         : [];
-      const cultivoFinal = (conf.modo==='campos' && f.detalle.cultivoNuevo) ? f.detalle.cultivoNuevo : f.cultivoActual;
+      const modoConDetalle = conf.modo === 'campos' || conf.modo === 'siembra';
+      const cultivoFinal = (modoConDetalle && f.detalle.cultivoNuevo) ? f.detalle.cultivoNuevo : f.cultivoActual;
       return { lote: f.lote, campo: f.campo, cultivo: cultivoFinal, ha: f.ha, productos: prods,
-               comentario: f.comentario||'', detalle: conf.modo==='campos' ? f.detalle : (ta ? {tipoAplicacion:ta} : {}) };
+               comentario: f.comentario||'', detalle: modoConDetalle ? f.detalle : (ta ? {tipoAplicacion:ta} : {}) };
     });
 
     const camposUnicos = [...new Set(filas.map(f=>f.campo))];
@@ -1154,6 +1269,71 @@ async function confirmar() {
         alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
       });
       y = doc.lastAutoTable.finalY + 9;
+
+    } else if (tipo === 'Siembra') {
+      // Siembra: tabla base + curasemilla + fertilizante
+      doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+      doc.text('DATOS DE SIEMBRA POR LOTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
+      doc.autoTable({
+        head:[['Campo','Lote','Cultivo','Ha','Variedad','Densidad','Comentario']],
+        body: lotesPayload.map(l=>[l.campo,l.lote,l.cultivo,l.ha,l.detalle.variedad||'—',(l.detalle.densidad||'—')+' '+(l.detalle.unidadDensidad||''),l.comentario||'']),
+        startY:y, margin:{left:mL,right:mL},
+        styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
+        headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
+        alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      // Curasemilla / Inoculante
+      const curaRows = [];
+      lotesPayload.forEach(l => {
+        const curas = l.detalle.curasemillas || [];
+        const provs = (l.detalle.curasemillaProveedores || []).filter(p=>p).join(', ') || '—';
+        curas.filter(c=>c.nombre||c.dosis).forEach(c => {
+          curaRows.push([l.lote+' ('+l.campo+')', c.nombre||'—', c.dosis||'—', c.unidad||'', provs]);
+        });
+      });
+      if (curaRows.length) {
+        if (y>240) { doc.addPage(); hdr(); y=40; }
+        doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+        doc.text('CURASEMILLA / INOCULANTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
+        doc.autoTable({
+          head:[['Lote (Campo)','Producto','Dosis','Unidad','Proveedor(es)']],
+          body: curaRows, startY:y, margin:{left:mL,right:mL},
+          styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
+          headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
+          columnStyles:{0:{fontStyle:'bold'},2:{halign:'right'},4:{fontSize:8,textColor:[80,80,80]}},
+          alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+
+      // Fertilizante
+      const fertRows = [];
+      lotesPayload.forEach(l => {
+        const ferts = l.detalle.fertilizantes || [];
+        const provs = (l.detalle.fertilizanteProveedores || []).filter(p=>p).join(', ') || '—';
+        ferts.filter(f=>f.nombre||f.dosis).forEach(f => {
+          fertRows.push([l.lote+' ('+l.campo+')', f.nombre||'—', f.dosis||'—', f.unidad||'', provs]);
+        });
+      });
+      if (fertRows.length) {
+        if (y>240) { doc.addPage(); hdr(); y=40; }
+        doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
+        doc.text('FERTILIZANTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
+        doc.autoTable({
+          head:[['Lote (Campo)','Tipo / Producto','Dosis','Unidad','Proveedor(es)']],
+          body: fertRows, startY:y, margin:{left:mL,right:mL},
+          styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
+          headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
+          columnStyles:{0:{fontStyle:'bold'},2:{halign:'right'},4:{fontSize:8,textColor:[80,80,80]}},
+          alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
 
     } else {
       doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
