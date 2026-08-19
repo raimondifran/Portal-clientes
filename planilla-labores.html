@@ -1272,68 +1272,138 @@ async function confirmar() {
       y = doc.lastAutoTable.finalY + 9;
 
     } else if (tipo === 'Siembra') {
-      // Siembra: tabla base + curasemilla + fertilizante
+      // ── 1. POR LOTE ───────────────────────────────────────────
       doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
-      doc.text('DATOS DE SIEMBRA POR LOTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
-      doc.autoTable({
-        head:[['Campo','Lote','Cultivo','Ha','Variedad','Origen semilla','Densidad','Comentario']],
-        body: lotesPayload.map(l=>[l.campo,l.lote,l.cultivo,l.ha,l.detalle.variedad||'—',l.detalle.origenSemilla||'—',(l.detalle.densidad||'—')+' '+(l.detalle.unidadDensidad||''),l.comentario||'']),
-        startY:y, margin:{left:mL,right:mL},
-        styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
-        headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
-        alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
-      });
-      y = doc.lastAutoTable.finalY + 8;
+      doc.text('SIEMBRA POR LOTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
 
-      // Curasemilla / Inoculante
-      const curaRows = [];
-      lotesPayload.forEach(l => {
-        const curas = l.detalle.curasemillas || [];
-        const provs = (l.detalle.curasemillaProveedores || []).filter(p=>p).join(', ') || '—';
-        curas.filter(c=>c.nombre||c.dosis).forEach(c => {
-          curaRows.push([l.lote+' ('+l.campo+')', c.nombre||'—', c.dosis||'—', c.unidad||'', provs]);
-        });
-      });
-      if (curaRows.length) {
+      lotesPayload.forEach(f => {
+        const det = f.detalle || {};
+        const haNum = parseFloat(f.ha || 0);
+        const densHa = (det.unidadDensidad === 'kg/ha' && det.densidad) ? parseFloat(det.densidad) : null;
+        const curas = (det.curasemillas||[]).filter(c=>c.nombre||c.dosis);
+        const ferts = (det.fertilizantes||[]).filter(x=>x.nombre||x.dosis);
         if (y>240) { doc.addPage(); hdr(); y=40; }
+        // cabecera del lote
+        doc.setFillColor(...VERDE); doc.roundedRect(mL,y,cW,8,1.5,1.5,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...BLANCO);
+        doc.text(`${f.lote} (${f.campo})`,mL+3,y+5.5);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9);
+        doc.text(`${f.ha} ha   |   ${f.cultivo}`,mL+75,y+5.5);
+        doc.setTextColor(0,0,0); y+=10;
+        // sub-info: variedad, densidad, origen
+        const sub = [
+          det.variedad ? 'Variedad: '+det.variedad : null,
+          det.densidad ? 'Densidad: '+det.densidad+' '+(det.unidadDensidad||'') : null,
+          det.origenSemilla ? 'Origen semilla: '+det.origenSemilla : null,
+        ].filter(Boolean);
+        if (sub.length) {
+          doc.setFontSize(8.5); doc.setTextColor(70,70,70);
+          doc.text(sub.join('   |   '),mL+3,y+4);
+          doc.setTextColor(0,0,0); y+=8;
+        }
+        // filas de insumos
+        const rows = [];
+        const calcTotal = (dosis,unidad) => {
+          const d = parseFloat(String(dosis).replace(',','.'));
+          if (isNaN(d)||haNum<=0) return '—';
+          if (unidad==='KIT') return d+' KIT';
+          if (unidad&&unidad.includes('/100kg')&&densHa) return (d*densHa/100*haNum).toFixed(2)+' '+unidad.split('/')[0];
+          if (unidad&&unidad.includes('/ha')) return (d*haNum).toFixed(2)+' '+unidad.split('/')[0];
+          return '—';
+        };
+        const cprovs = (det.curasemillaProveedores||[]).filter(p=>p).join(', ')||'—';
+        const fprovs = (det.fertilizanteProveedores||[]).filter(p=>p).join(', ')||'—';
+        curas.forEach(c=>rows.push(['Curasemilla/Inoc.',c.nombre||'—',c.dosis||'—',c.unidad||'',calcTotal(c.dosis,c.unidad),cprovs]));
+        ferts.forEach(x=>rows.push(['Fertilizante',x.nombre||'—',x.dosis||'—',x.unidad||'',calcTotal(x.dosis,x.unidad),fprovs]));
+        if (rows.length) {
+          doc.autoTable({
+            head:[['Tipo','Producto','Dosis','Unidad','Total','Proveedor(es)']],
+            body:rows, startY:y, margin:{left:mL,right:mL},
+            styles:{fontSize:9,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
+            headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8.5},
+            columnStyles:{0:{cellWidth:32,fontStyle:'bold'},2:{halign:'right'},4:{halign:'right',fontStyle:'bold'},5:{fontSize:7.5,textColor:[80,80,80]}},
+            alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
+          });
+          y = doc.lastAutoTable.finalY+4;
+        }
+        if (f.comentario&&f.comentario.trim()) {
+          doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(90,90,90);
+          doc.text('Obs: '+f.comentario.trim(),mL+2,y+4);
+          doc.setTextColor(0,0,0); y+=8;
+        }
+        y+=3;
+      });
+
+      // ── 2. RESUMEN POR INSUMO ─────────────────────────────────
+      const mapaInsumos = {}, ordenInsumos = [];
+      const addInsumo = (nombre, dosis, unidad, tipo2, provs, lote, campo, cultivo, ha, densHa2) => {
+        if (!nombre) return;
+        const k = nombre.trim().toLowerCase()+'|||'+unidad+'|||'+tipo2;
+        if (!mapaInsumos[k]) { mapaInsumos[k]={nombre:nombre.trim(),unidad,tipo:tipo2,lotes:[],provs:new Set()}; ordenInsumos.push(k); }
+        const d=parseFloat(String(dosis).replace(',','.')); let sub=null;
+        if (!isNaN(d)&&ha>0) {
+          if (unidad==='KIT') sub=d;
+          else if (unidad&&unidad.includes('/100kg')&&densHa2) sub=d*densHa2/100*ha;
+          else if (unidad&&unidad.includes('/ha')) sub=d*ha;
+        }
+        mapaInsumos[k].lotes.push({lote,campo,cultivo,ha,dosis:d,sub});
+        provs.filter(p=>p).forEach(p=>mapaInsumos[k].provs.add(p));
+      };
+      lotesPayload.forEach(f=>{
+        const det=f.detalle||{}, ha=parseFloat(f.ha||0);
+        const densHa2=(det.unidadDensidad==='kg/ha'&&det.densidad)?parseFloat(det.densidad):null;
+        (det.curasemillas||[]).forEach(c=>addInsumo(c.nombre,c.dosis,c.unidad||'','Curasemilla/Inoc.',det.curasemillaProveedores||[],f.lote,f.campo,f.cultivo,ha,densHa2));
+        (det.fertilizantes||[]).forEach(x=>addInsumo(x.nombre,x.dosis,x.unidad||'','Fertilizante',det.fertilizanteProveedores||[],f.lote,f.campo,f.cultivo,ha,densHa2));
+      });
+      if (ordenInsumos.length) {
+        if (y>210) { doc.addPage(); hdr(); y=40; }
         doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
-        doc.text('CURASEMILLA / INOCULANTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
+        doc.text('RESUMEN POR INSUMO',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
         doc.autoTable({
-          head:[['Lote (Campo)','Producto','Dosis','Unidad','Proveedor(es)']],
-          body: curaRows, startY:y, margin:{left:mL,right:mL},
-          styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
-          headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
-          columnStyles:{0:{fontStyle:'bold'},2:{halign:'right'},4:{fontSize:8,textColor:[80,80,80]}},
+          head:[['Insumo','Tipo','Unidad','Total','Proveedor(es)']],
+          body:ordenInsumos.map(k=>{
+            const ins=mapaInsumos[k];
+            const tots=ins.lotes.map(l=>l.sub).filter(s=>s!=null);
+            const tot=tots.length?tots.reduce((a,b)=>a+b,0).toFixed(2)+' '+ins.unidad.split('/')[0]:'—';
+            return [ins.nombre,ins.tipo,ins.unidad,tot,Array.from(ins.provs).join(', ')||'—'];
+          }),
+          startY:y, margin:{left:mL,right:mL},
+          styles:{fontSize:8.5,cellPadding:{top:3,bottom:3,left:3,right:3}},
+          headStyles:{fillColor:VERDE,textColor:BLANCO,fontStyle:'bold',fontSize:8},
+          columnStyles:{0:{fontStyle:'bold'},3:{halign:'right',fontStyle:'bold',textColor:VERDE},4:{fontSize:7.5}},
           alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
         });
-        y = doc.lastAutoTable.finalY + 8;
-      }
+        y=doc.lastAutoTable.finalY+9;
 
-      // Fertilizante
-      const fertRows = [];
-      lotesPayload.forEach(l => {
-        const ferts = l.detalle.fertilizantes || [];
-        const provs = (l.detalle.fertilizanteProveedores || []).filter(p=>p).join(', ') || '—';
-        ferts.filter(f=>f.nombre||f.dosis).forEach(f => {
-          fertRows.push([l.lote+' ('+l.campo+')', f.nombre||'—', f.dosis||'—', f.unidad||'', provs]);
-        });
-      });
-      if (fertRows.length) {
-        if (y>240) { doc.addPage(); hdr(); y=40; }
+        // ── 3. INFORME DE GESTIÓN ─────────────────────────────
+        if (y>210) { doc.addPage(); hdr(); y=40; }
         doc.setFillColor(...GRIS); doc.rect(mL,y,cW,8,'F');
         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
-        doc.text('FERTILIZANTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
+        doc.text('INFORME DE GESTIÓN',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
+        const pgRows2=[];
+        ordenInsumos.forEach(k=>{
+          const ins=mapaInsumos[k], gc={}, ordGc=[];
+          ins.lotes.forEach(l=>{
+            const gk=l.campo+'|||'+l.cultivo;
+            if(!gc[gk]){gc[gk]={campo:l.campo,cultivo:l.cultivo,ha:0,tot:0,hasTot:false};ordGc.push(gk);}
+            gc[gk].ha+=l.ha;
+            if(l.sub!=null){gc[gk].tot+=l.sub;gc[gk].hasTot=true;}
+          });
+          ordGc.forEach(gk=>{
+            const g=gc[gk];
+            pgRows2.push([ins.nombre,ins.tipo,g.campo,g.cultivo,g.ha.toFixed(2),g.hasTot?g.tot.toFixed(2)+' '+ins.unidad.split('/')[0]:'—']);
+          });
+        });
         doc.autoTable({
-          head:[['Lote (Campo)','Tipo / Producto','Dosis','Unidad','Proveedor(es)']],
-          body: fertRows, startY:y, margin:{left:mL,right:mL},
+          head:[['Insumo','Tipo','Campo','Cultivo','Ha','Cantidad']],
+          body:pgRows2, startY:y, margin:{left:mL,right:mL},
           styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
-          headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
-          columnStyles:{0:{fontStyle:'bold'},2:{halign:'right'},4:{fontSize:8,textColor:[80,80,80]}},
+          headStyles:{fillColor:VERDE,textColor:BLANCO,fontStyle:'bold',fontSize:8},
+          columnStyles:{0:{fontStyle:'bold'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold',textColor:VERDE}},
           alternateRowStyles:{fillColor:[248,251,248]}, theme:'plain', tableLineColor:[220,220,220], tableLineWidth:0.2,
         });
-        y = doc.lastAutoTable.finalY + 8;
       }
 
     } else {
