@@ -345,7 +345,7 @@ function showTab(name) {
 
 // ── AUTOCOMPLETE ──────────────────────────────────────────────
 const UNIDADES_PRODUCTO    = ['L/ha','kg/ha','cc/ha','g/ha'];
-const UNIDADES_CURASEMILLA = ['cc/100kg','L/100kg','g/100kg','kg/100kg','cc/ha','L/ha'];
+const UNIDADES_CURASEMILLA = ['cc/100kg','L/100kg','g/100kg','kg/100kg','cc/ha','L/ha','KIT'];
 const UNIDADES_FERTILIZANTE = ['kg/ha','L/ha','kg/tn','g/ha','cc/ha'];
 let productosConocidos = new Set(JSON.parse(localStorage.getItem('productos_conocidos') || '[]'));
 
@@ -577,10 +577,11 @@ const CAMPOS_POR_TIPO = {
   'Fumigada':      { modo: 'productos', tipoAplicacion: true },
   'Fertilización': { modo: 'productos', tipoAplicacion: true },
   'Siembra':       { modo: 'siembra', campos: [
-    { key: 'cultivoNuevo',   label: 'Cultivo sembrado', type: 'text' },
-    { key: 'variedad',       label: 'Variedad',         type: 'text' },
-    { key: 'densidad',       label: 'Densidad',         type: 'number' },
-    { key: 'unidadDensidad', label: 'Unidad',           type: 'select', options: ['kg/ha','pl/ha','semillas/ha'] }
+    { key: 'cultivoNuevo',   label: 'Cultivo sembrado',        type: 'text' },
+    { key: 'variedad',       label: 'Variedad',                type: 'text' },
+    { key: 'origenSemilla',  label: 'Origen / destino semilla', type: 'text' },
+    { key: 'densidad',       label: 'Densidad',                type: 'number' },
+    { key: 'unidadDensidad', label: 'Unidad',                  type: 'select', options: ['kg/ha','pl/ha','semillas/ha'] }
   ]},
   'Cosecha':       { modo: 'campos', campos: [
     { key: 'rendimiento',       label: 'Rendimiento', type: 'number' },
@@ -1276,8 +1277,8 @@ async function confirmar() {
       doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...VERDE);
       doc.text('DATOS DE SIEMBRA POR LOTE',mL+3,y+5.5); doc.setTextColor(0,0,0); y+=11;
       doc.autoTable({
-        head:[['Campo','Lote','Cultivo','Ha','Variedad','Densidad','Comentario']],
-        body: lotesPayload.map(l=>[l.campo,l.lote,l.cultivo,l.ha,l.detalle.variedad||'—',(l.detalle.densidad||'—')+' '+(l.detalle.unidadDensidad||''),l.comentario||'']),
+        head:[['Campo','Lote','Cultivo','Ha','Variedad','Origen semilla','Densidad','Comentario']],
+        body: lotesPayload.map(l=>[l.campo,l.lote,l.cultivo,l.ha,l.detalle.variedad||'—',l.detalle.origenSemilla||'—',(l.detalle.densidad||'—')+' '+(l.detalle.unidadDensidad||''),l.comentario||'']),
         startY:y, margin:{left:mL,right:mL},
         styles:{fontSize:8.5,cellPadding:{top:2.5,bottom:2.5,left:3,right:3}},
         headStyles:{fillColor:VERDE_CLARO,textColor:VERDE,fontStyle:'bold',fontSize:8},
