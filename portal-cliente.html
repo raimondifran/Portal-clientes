@@ -229,6 +229,19 @@ function renderLabores(labores) {
   const resumen = document.getElementById('resumen');
   resumen.textContent = labores.length + ' labor(es) encontrada(s).';
 
+  // Poblar dropdown con campos individuales de los lotes (no depende del Maestro)
+  const camposSel = document.getElementById('fCampo');
+  const valorActual = camposSel.value;
+  const camposSet = new Set();
+  labores.forEach(labor => {
+    (labor.lotes || []).forEach(l => { if (l.campo) camposSet.add(l.campo); });
+    // También incluir campo del labor si no es combinado
+    if (labor.campo && !labor.campo.includes(' + ')) camposSet.add(labor.campo);
+  });
+  const camposOrdenados = Array.from(camposSet).sort();
+  camposSel.innerHTML = '<option value="">Todos</option>' +
+    camposOrdenados.map(c => `<option value="${escapeHtml(c)}"${c === valorActual ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+
   if (!labores.length) {
     el.innerHTML = '<div class="empty">No hay labores cargadas para este filtro.</div>';
     return;
@@ -310,16 +323,43 @@ function exportarExcel() {
   URL.revokeObjectURL(url);
 }
 
+let todasLasLabores = [];
+
 async function consultar() {
   const el = document.getElementById('resultado');
-  el.innerHTML = '<div class="loading">Cargando…</div>';
   const campo = document.getElementById('fCampo').value;
+
+  // Si ya tenemos datos, filtrar localmente
+  if (todasLasLabores.length && campo) {
+    const filtradas = todasLasLabores.map(labor => {
+      // Filtrar lotes que coincidan con el campo
+      const lotesFiltrados = (labor.lotes || []).filter(l => l.campo === campo);
+      if (!lotesFiltrados.length) return null;
+      return { ...labor, lotes: lotesFiltrados };
+    }).filter(Boolean);
+    renderLabores(filtradas);
+    return;
+  }
+  if (todasLasLabores.length && !campo) {
+    renderLabores(todasLasLabores);
+    return;
+  }
+
+  // Primera carga: traer todas sin filtro del backend
+  el.innerHTML = '<div class="loading">Cargando…</div>';
   try {
-    let url = SHEETS_URL + '?action=portalTodas&token=' + encodeURIComponent(token);
-    if (campo) url += '&campo=' + encodeURIComponent(campo);
+    const url = SHEETS_URL + '?action=portalTodas&token=' + encodeURIComponent(token);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    renderLabores(data.labores);
+    todasLasLabores = data.labores || [];
+    const laboresMostrar = campo
+      ? todasLasLabores.map(labor => {
+          const lotesFiltrados = (labor.lotes || []).filter(l => l.campo === campo);
+          if (!lotesFiltrados.length) return null;
+          return { ...labor, lotes: lotesFiltrados };
+        }).filter(Boolean)
+      : todasLasLabores;
+    renderLabores(laboresMostrar);
   } catch (err) {
     if (manejarError(err)) return;
     el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
