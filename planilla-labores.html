@@ -1353,6 +1353,7 @@ async function confirmar() {
       lotesPayload.forEach(f=>{
         const det=f.detalle||{}, ha=parseFloat(f.ha||0);
         const densHa2=(det.unidadDensidad==='kg/ha'&&det.densidad)?parseFloat(det.densidad):null;
+        if (det.densidad) addInsumo(det.variedad||det.cultivoNuevo||'Semilla', det.densidad, det.unidadDensidad||'kg/ha', 'Semilla', det.origenSemilla?[det.origenSemilla]:[], f.lote, f.campo, f.cultivo, ha, null);
         (det.curasemillas||[]).forEach(c=>addInsumo(c.nombre,c.dosis,c.unidad||'','Curasemilla/Inoc.',det.curasemillaProveedores||[],f.lote,f.campo,f.cultivo,ha,densHa2));
         (det.fertilizantes||[]).forEach(x=>addInsumo(x.nombre,x.dosis,x.unidad||'','Fertilizante',det.fertilizanteProveedores||[],f.lote,f.campo,f.cultivo,ha,densHa2));
       });
