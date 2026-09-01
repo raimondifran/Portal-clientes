@@ -113,7 +113,13 @@
   <div class="toolbar">
     <div class="field">
       <label>Campo</label>
-      <select id="fCampo" onchange="consultar()">
+      <select id="fCampo" onchange="onFiltrarCampo()">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Lote</label>
+      <select id="fLote" onchange="consultar()">
         <option value="">Todos</option>
       </select>
     </div>
@@ -325,41 +331,53 @@ function exportarExcel() {
 
 let todasLasLabores = [];
 
+function onFiltrarCampo() {
+  // Al cambiar campo, resetear lote y repoblar opciones
+  const campo = document.getElementById('fCampo').value;
+  const fLote = document.getElementById('fLote');
+  fLote.innerHTML = '<option value="">Todos</option>';
+  if (campo && todasLasLabores.length) {
+    const lotesSet = new Set();
+    todasLasLabores.forEach(labor => {
+      (labor.lotes || []).forEach(l => { if (l.campo === campo && l.lote) lotesSet.add(l.lote); });
+    });
+    Array.from(lotesSet).sort().forEach(l => {
+      fLote.innerHTML += `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`;
+    });
+  }
+  consultar();
+}
+
+function aplicarFiltros(labores) {
+  const campo = document.getElementById('fCampo').value;
+  const lote  = document.getElementById('fLote').value;
+  if (!campo && !lote) return labores;
+  return labores.map(labor => {
+    let lotesFiltrados = labor.lotes || [];
+    if (campo) lotesFiltrados = lotesFiltrados.filter(l => l.campo === campo);
+    if (lote)  lotesFiltrados = lotesFiltrados.filter(l => String(l.lote) === lote);
+    if (!lotesFiltrados.length) return null;
+    return { ...labor, lotes: lotesFiltrados };
+  }).filter(Boolean);
+}
+
 async function consultar() {
   const el = document.getElementById('resultado');
-  const campo = document.getElementById('fCampo').value;
 
   // Si ya tenemos datos, filtrar localmente
-  if (todasLasLabores.length && campo) {
-    const filtradas = todasLasLabores.map(labor => {
-      // Filtrar lotes que coincidan con el campo
-      const lotesFiltrados = (labor.lotes || []).filter(l => l.campo === campo);
-      if (!lotesFiltrados.length) return null;
-      return { ...labor, lotes: lotesFiltrados };
-    }).filter(Boolean);
-    renderLabores(filtradas);
-    return;
-  }
-  if (todasLasLabores.length && !campo) {
-    renderLabores(todasLasLabores);
+  if (todasLasLabores.length) {
+    renderLabores(aplicarFiltros(todasLasLabores));
     return;
   }
 
-  // Primera carga: traer todas sin filtro del backend
+  // Primera carga
   el.innerHTML = '<div class="loading">Cargando…</div>';
   try {
     const url = SHEETS_URL + '?action=portalTodas&token=' + encodeURIComponent(token);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     todasLasLabores = data.labores || [];
-    const laboresMostrar = campo
-      ? todasLasLabores.map(labor => {
-          const lotesFiltrados = (labor.lotes || []).filter(l => l.campo === campo);
-          if (!lotesFiltrados.length) return null;
-          return { ...labor, lotes: lotesFiltrados };
-        }).filter(Boolean)
-      : todasLasLabores;
-    renderLabores(laboresMostrar);
+    renderLabores(aplicarFiltros(todasLasLabores));
   } catch (err) {
     if (manejarError(err)) return;
     el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
