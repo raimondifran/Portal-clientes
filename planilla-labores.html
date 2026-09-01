@@ -1425,6 +1425,33 @@ async function confirmar() {
     const arch=`${ot?ot+'_':''}${cliente}_${campoLabel}_${tipo}_${fecha}.pdf`.replace(/\s+/g,'_');
     doc.save(arch);
 
+    // ── Enviar PDF por mail (POST con base64) ──────────────────
+    (async () => {
+      try {
+        // Convertir PDF a base64
+        const arr = new Uint8Array(doc.output('arraybuffer'));
+        let bin = '';
+        for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+        const pdfBase64 = btoa(bin);
+        const subject = `[Labores] ${ot ? 'OT '+ot+' — ' : ''}${tipo} — ${cliente}`;
+        const htmlBody = `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;color:#1a202c;">
+          <div style="background:linear-gradient(135deg,#1a5276,#2e86c1);color:white;padding:16px 20px;border-radius:8px 8px 0 0;">
+            <h2 style="margin:0;font-size:17px;">Nueva labor registrada</h2>
+            <p style="margin:4px 0 0;opacity:.85;font-size:12px;">${tipo} — ${cliente}</p>
+          </div>
+          <div style="border:1px solid #d5d8dc;border-top:none;padding:16px 20px;border-radius:0 0 8px 8px;">
+            <p style="font-size:13px;margin:0 0 10px;">El informe completo se adjunta como PDF.</p>
+            <p style="font-size:10px;color:#aaa;margin-top:14px;border-top:1px solid #eee;padding-top:8px;">Email automático — Sistema de Labores Raimondi</p>
+          </div>
+        </div>`;
+        await fetch(SHEETS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'enviarPDFEmail', token: staffToken, cliente, pdfBase64, filename: arch, subject, htmlBody })
+        });
+      } catch(e) { console.log('Mail POST error:', e); }
+    })();
+
     // Guardar en la base
     const payload = JSON.stringify({ fecha, tipo, operador, observaciones: obs,
       planilla: cliente+' - '+campoLabel, ot, cliente, campo: campoLabel, lotes: lotesPayload });
