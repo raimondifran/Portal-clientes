@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestionar Rotación</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;color:#1a202c}
+  /* LOGIN */
+  #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1a5276,#2e86c1)}
+  .login-card{background:#fff;border-radius:14px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+  .login-card h2{color:#1a5276;font-size:1.3rem;margin-bottom:6px}
+  .login-card p{font-size:.82rem;color:#5d6d7e;margin-bottom:22px}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:.78rem;font-weight:600;color:#5d6d7e;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+  .form-group input{width:100%;padding:9px 12px;border:1.5px solid #d5d8dc;border-radius:8px;font-size:.93rem;outline:none;transition:border .2s}
+  .form-group input:focus{border-color:#2e86c1}
+  .btn{width:100%;padding:11px;background:linear-gradient(135deg,#1a5276,#2e86c1);color:#fff;border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer;transition:opacity .2s}
+  .btn:hover{opacity:.88}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .error-msg{background:#fdf2f2;border:1px solid #f5c6c6;border-radius:8px;padding:9px 12px;font-size:.82rem;color:#c0392b;margin-bottom:12px;display:none}
+  /* MAIN */
+  #mainScreen{display:none}
+  .topbar{background:linear-gradient(135deg,#1a5276,#2e86c1);color:#fff;padding:13px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+  .topbar h1{font-size:1.1rem;font-weight:700}
+  .topbar .user{font-size:.8rem;opacity:.85}
+  .logout-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;padding:5px 13px;border-radius:6px;font-size:.8rem;cursor:pointer}
+  .logout-btn:hover{background:rgba(255,255,255,.28)}
+  .content{max-width:900px;margin:0 auto;padding:22px 16px}
+  .loading{text-align:center;padding:40px;color:#5d6d7e;font-size:.95rem}
+  /* CLIENTE */
+  .cliente-card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:22px;overflow:hidden}
+  .cliente-header{background:#1a5276;color:#fff;padding:11px 18px;font-size:1rem;font-weight:700}
+  /* CAMPO */
+  .campo-block{border-bottom:1px solid #eaf0f6}
+  .campo-block:last-child{border-bottom:none}
+  .campo-title{padding:10px 18px;font-size:.85rem;font-weight:700;color:#2e86c1;background:#f4f9ff;text-transform:uppercase;letter-spacing:.04em}
+  /* LOTE ROW */
+  .lote-row{display:flex;align-items:center;gap:12px;padding:9px 18px;border-bottom:1px solid #f0f4f8;flex-wrap:wrap}
+  .lote-row:last-child{border-bottom:none}
+  .lote-name{font-weight:600;font-size:.88rem;min-width:140px;color:#1a202c}
+  .lote-ha{font-size:.78rem;color:#8e9aaf;min-width:60px}
+  .cultivo-input{flex:1;min-width:160px;padding:7px 10px;border:1.5px solid #d6eaf8;border-radius:7px;font-size:.88rem;outline:none;transition:border .2s;background:#f8fbff}
+  .cultivo-input:focus{border-color:#2e86c1;background:#fff}
+  .cultivo-input.modified{border-color:#f39c12;background:#fffbf0}
+  .cultivo-input.saved{border-color:#27ae60;background:#f0faf4}
+  .save-btn{padding:6px 15px;background:#2e86c1;color:#fff;border:none;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .2s}
+  .save-btn:hover{opacity:.85}
+  .save-btn:disabled{opacity:.45;cursor:not-allowed}
+  .save-btn.saving{background:#95a5a6}
+  .ok-icon{color:#27ae60;font-size:1rem;display:none}
+  /* Toast */
+  #toast{position:fixed;bottom:22px;right:22px;background:#1a5276;color:#fff;padding:11px 20px;border-radius:9px;font-size:.88rem;box-shadow:0 4px 16px rgba(0,0,0,.18);display:none;z-index:999}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h2>🌱 Gestionar Rotación</h2>
+    <p>Acceso solo para operadores</p>
+    <div id="loginError" class="error-msg"></div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input id="loginUser" type="text" autocomplete="username" placeholder="Tu usuario">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input id="loginPass" type="password" autocomplete="current-password" placeholder="Tu contraseña">
+    </div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="mainScreen">
+  <div class="topbar">
+    <h1>🌱 Gestionar Rotación</h1>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span class="user" id="userLabel"></span>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+  <div class="content">
+    <div id="cuerpo" class="loading">Cargando datos...</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzmPGjVHwW_ePPt6s8pBM-CrMCR8dqkKZ3xhUqK7-B8BhfFpMsLXjdFJlBmQbVmGqx/exec';
+
+// ── AUTH ──
+let sesion = null;
+
+function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  return crypto.subtle.digest('SHA-256', buf).then(b => {
+    return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('');
+  });
+}
+
+function jsonp(params) {
+  return new Promise((res, rej) => {
+    const cb = 'cb_' + Math.random().toString(36).slice(2);
+    const url = GAS_URL + '?' + Object.entries({ ...params, callback: cb })
+      .map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
+    const s = document.createElement('script');
+    window[cb] = data => { delete window[cb]; s.remove(); res(data); };
+    s.onerror = () => { delete window[cb]; s.remove(); rej(new Error('Error de red')); };
+    s.src = url;
+    document.head.appendChild(s);
+  });
+}
+
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  if (!user || !pass) { showErr(errEl, 'Completá usuario y contraseña'); return; }
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  try {
+    const hash = await sha256(pass);
+    const r = await jsonp({ action: 'login', usuario: user, hash });
+    if (!r.ok) throw new Error(r.error || 'Usuario o contraseña incorrectos');
+    if (r.rol !== 'operador') throw new Error('Solo operadores pueden acceder a esta pantalla');
+    sesion = { token: r.token, usuario: r.usuario || user, rol: r.rol, cliente: r.cliente };
+    errEl.style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    document.getElementById('userLabel').textContent = sesion.usuario;
+    cargarMaestro();
+  } catch(e) {
+    showErr(errEl, e.message);
+    btn.disabled = false; btn.textContent = 'Ingresar';
+  }
+}
+
+function doLogout() {
+  sesion = null;
+  document.getElementById('mainScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginBtn').disabled = false;
+  document.getElementById('loginBtn').textContent = 'Ingresar';
+}
+
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
+// ── LOGIN con Enter ──
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+
+// ── CARGAR MAESTRO ──
+async function cargarMaestro() {
+  const cuerpo = document.getElementById('cuerpo');
+  cuerpo.innerHTML = '<div class="loading">Cargando datos...</div>';
+  try {
+    const r = await jsonp({ action: 'maestroOperador', token: sesion.token });
+    if (!r.ok) throw new Error(r.error || 'Error al cargar datos');
+    renderMaestro(r.clientes || []);
+  } catch(e) {
+    cuerpo.innerHTML = '<div class="loading" style="color:#c0392b;">Error: ' + e.message + '</div>';
+  }
+}
+
+function renderMaestro(clientes) {
+  const cuerpo = document.getElementById('cuerpo');
+  if (!clientes.length) {
+    cuerpo.innerHTML = '<div class="loading">No tenés clientes asignados. Pedile al administrador que te asigne permisos.</div>';
+    return;
+  }
+  let html = '';
+  clientes.forEach(cli => {
+    html += '<div class="cliente-card">';
+    html += '<div class="cliente-header">👤 ' + cli.cliente + '</div>';
+    (cli.campos || []).forEach(campo => {
+      html += '<div class="campo-block">';
+      html += '<div class="campo-title">📍 ' + campo.campo + '</div>';
+      (campo.lotes || []).forEach(lote => {
+        const id = 'lote_' + slugify(cli.cliente + '_' + campo.campo + '_' + lote.lote);
+        html += `<div class="lote-row" id="row_${id}">
+          <span class="lote-name">${lote.lote}</span>
+          <span class="lote-ha">${lote.ha ? lote.ha + ' ha' : ''}</span>
+          <input class="cultivo-input" id="inp_${id}"
+            value="${esc(lote.cultivo)}"
+            data-original="${esc(lote.cultivo)}"
+            data-cliente="${esc(cli.cliente)}"
+            data-campo="${esc(campo.campo)}"
+            data-lote="${esc(lote.lote)}"
+            data-ha="${esc(String(lote.ha))}"
+            onchange="markModified('${id}')"
+            oninput="markModified('${id}')"
+            placeholder="Cultivo actual">
+          <button class="save-btn" id="btn_${id}" onclick="guardarLote('${id}')">Guardar</button>
+          <span class="ok-icon" id="ok_${id}">✓</span>
+        </div>`;
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  cuerpo.innerHTML = html;
+}
+
+function markModified(id) {
+  const inp = document.getElementById('inp_' + id);
+  if (!inp) return;
+  if (inp.value !== inp.dataset.original) {
+    inp.classList.add('modified');
+    inp.classList.remove('saved');
+  } else {
+    inp.classList.remove('modified');
+  }
+}
+
+async function guardarLote(id) {
+  const inp = document.getElementById('inp_' + id);
+  const btn = document.getElementById('btn_' + id);
+  const ok  = document.getElementById('ok_' + id);
+  if (!inp || !btn) return;
+
+  const payload = JSON.stringify({
+    cliente: inp.dataset.cliente,
+    campo:   inp.dataset.campo,
+    lote:    inp.dataset.lote,
+    cultivo: inp.value.trim(),
+    ha:      inp.dataset.ha
+  });
+
+  btn.disabled = true; btn.textContent = '...'; btn.classList.add('saving');
+  try {
+    const r = await jsonp({ action: 'guardarLoteAuth', token: sesion.token, payload });
+    if (!r.ok) throw new Error(r.error || 'Error al guardar');
+    inp.dataset.original = inp.value;
+    inp.classList.remove('modified');
+    inp.classList.add('saved');
+    ok.style.display = 'inline';
+    setTimeout(() => { ok.style.display = 'none'; inp.classList.remove('saved'); }, 2500);
+    showToast('Lote guardado ✓');
+  } catch(e) {
+    showToast('Error: ' + e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar'; btn.classList.remove('saving');
+  }
+}
+
+function showToast(msg, error) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = error ? '#c0392b' : '#1a5276';
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2800);
+}
+
+function slugify(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+</script>
+</body>
+</html>
