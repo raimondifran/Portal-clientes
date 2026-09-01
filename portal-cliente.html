@@ -113,13 +113,7 @@
   <div class="toolbar">
     <div class="field">
       <label>Campo</label>
-      <select id="fCampo" onchange="onCampoChange()">
-        <option value="">Todos</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Lote</label>
-      <select id="fLote" onchange="consultar()">
+      <select id="fCampo" onchange="consultar()">
         <option value="">Todos</option>
       </select>
     </div>
@@ -156,20 +150,17 @@ function jsonpScript(url) {
 }
 
 async function jsonpFetch(url) {
-  // cache: 'no-store' fuerza al navegador a no usar caché en esta llamada
-  const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+  const res = await fetch(url, { method: 'GET' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
 async function jsonp(url) {
-  // Agregamos timestamp para evitar caché de Google CDN
-  const urlNocache = url + '&_t=' + Date.now();
   try {
-    return await jsonpFetch(urlNocache);
+    return await jsonpFetch(url);
   } catch (errFetch) {
     try {
-      return await jsonpScript(urlNocache);
+      return await jsonpScript(url);
     } catch (errScript) {
       throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
     }
@@ -196,44 +187,40 @@ function manejarError(err) {
   return false;
 }
 
-// Datos cargados de labores para poblar filtros
-let todosLosLabores = [];
-
-function actualizarFiltrosCampoLote(labores) {
-  const campoSel = document.getElementById('fCampo');
-  const loteSel  = document.getElementById('fLote');
-  const campoActual = campoSel.value;
-  const loteActual  = loteSel.value;
-
-  // Campos únicos de las labores
-  const campos = [...new Set(labores.map(l => l.campo).filter(Boolean))].sort();
-  campoSel.innerHTML = '<option value="">Todos</option>' +
-    campos.map(c => `<option value="${escapeHtml(c)}"${c === campoActual ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
-
-  // Lotes únicos del campo seleccionado (o todos si no hay campo)
-  const laborsFiltrados = campoActual ? labores.filter(l => l.campo === campoActual) : labores;
-  const lotes = [...new Set(
-    laborsFiltrados.flatMap(l => (l.lotes || []).map(lt => lt.lote)).filter(Boolean)
-  )].sort();
-  loteSel.innerHTML = '<option value="">Todos</option>' +
-    lotes.map(l => `<option value="${escapeHtml(l)}"${l === loteActual ? ' selected' : ''}>${escapeHtml(l)}</option>`).join('');
-}
-
-async function cargarFiltros() {
-  document.getElementById('tituloCliente').textContent = clienteGuardado || 'Portal de Cliente';
-}
-
-function onCampoChange() {
-  // Repoblar lotes según el campo seleccionado
-  const campo = document.getElementById('fCampo').value;
-  const laborsFiltrados = campo ? todosLosLabores.filter(l => l.campo === campo) : todosLosLabores;
-  const lotes = [...new Set(
-    laborsFiltrados.flatMap(l => (l.lotes || []).map(lt => lt.lote)).filter(Boolean)
-  )].sort();
-  const loteSel = document.getElementById('fLote');
-  loteSel.innerHTML = '<option value="">Todos</option>' +
-    lotes.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
-  consultar();
+// ── Formatear detalle de lote según tipo de labor ──
+function formatDetalleLote(det, tipo) {
+  if (!det || !Object.keys(det).length) return '';
+  if (tipo === 'Siembra') {
+    const partes = [];
+    // Semilla
+    if (det.densidad) {
+      const nombre = det.variedad || det.cultivoNuevo || 'Semilla';
+      const unidad = det.unidadDensidad || 'kg/ha';
+      partes.push(nombre + ' ' + det.densidad + ' ' + unidad);
+    }
+    // Curasemillas
+    (det.curasemillas || []).forEach(function(c) {
+      if (c && c.nombre) {
+        var txt = c.nombre;
+        if (c.dosis) txt += ' ' + c.dosis + (c.unidad ? ' ' + c.unidad : '');
+        partes.push(txt);
+      }
+    });
+    // Fertilizantes
+    (det.fertilizantes || []).forEach(function(f) {
+      if (f && f.nombre) {
+        var txt = f.nombre;
+        if (f.dosis) txt += ' ' + f.dosis + (f.unidad ? ' ' + f.unidad : '');
+        partes.push(txt);
+      }
+    });
+    return partes.join(' · ');
+  }
+  // Otros tipos: mostrar solo valores simples (no arrays/objetos)
+  return Object.entries(det)
+    .filter(function(e) { return e[1] != null && typeof e[1] !== 'object'; })
+    .map(function(e) { return e[0] + ': ' + e[1]; })
+    .join(' · ');
 }
 
 function renderLabores(labores) {
@@ -252,9 +239,7 @@ function renderLabores(labores) {
       const prodRows = (l.productos || []).map(p => `
         <tr><td>${escapeHtml(p.nombre)}</td><td>${escapeHtml(p.dosis)}</td><td>${escapeHtml(p.unidad)}</td></tr>
       `).join('');
-      const detalleTxt = l.detalle && Object.keys(l.detalle).length
-        ? Object.entries(l.detalle).map(([k, v]) => `${k}: ${v}`).join(' · ')
-        : '';
+      const detalleTxt = formatDetalleLote(l.detalle, labor.tipo);
       return `
         <div class="lote-block">
           <div class="lote-name">${escapeHtml(l.lote)} — ${escapeHtml(l.cultivo)} (${escapeHtml(l.ha)} ha)${l.campo ? ` <span style="font-weight:400;color:#5d6d7e;font-size:0.78rem">· ${escapeHtml(l.campo)}</span>` : ''}</div>
@@ -329,31 +314,28 @@ async function consultar() {
   const el = document.getElementById('resultado');
   el.innerHTML = '<div class="loading">Cargando…</div>';
   const campo = document.getElementById('fCampo').value;
-  const lote  = document.getElementById('fLote').value;
   try {
-    // Siempre traemos todas las labores del cliente (sin filtro de campo en servidor)
-    // para poder poblar los filtros correctamente
     let url = SHEETS_URL + '?action=portalTodas&token=' + encodeURIComponent(token);
+    if (campo) url += '&campo=' + encodeURIComponent(campo);
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-
-    todosLosLabores = data.labores || [];
-
-    // Poblar filtros de campo y lote desde los datos reales
-    actualizarFiltrosCampoLote(todosLosLabores);
-
-    // Aplicar filtros client-side
-    let labores = todosLosLabores;
-    if (campo) labores = labores.filter(l => l.campo === campo);
-    if (lote) {
-      labores = labores
-        .filter(lab => (lab.lotes || []).some(l => l.lote === lote))
-        .map(lab => ({ ...lab, lotes: (lab.lotes || []).filter(l => l.lote === lote) }));
-    }
-    renderLabores(labores);
+    renderLabores(data.labores);
   } catch (err) {
     if (manejarError(err)) return;
     el.innerHTML = '<div class="error">⚠️ ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+async function cargarFiltros() {
+  document.getElementById('tituloCliente').textContent = clienteGuardado || 'Portal de Cliente';
+  try {
+    const data = await jsonp(SHEETS_URL + '?action=portalMaestro&token=' + encodeURIComponent(token));
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    const sel = document.getElementById('fCampo');
+    sel.innerHTML = '<option value="">Todos</option>' +
+      data.campos.map(c => `<option value="${escapeHtml(c.campo)}">${escapeHtml(c.campo)}</option>`).join('');
+  } catch (err) {
+    if (manejarError(err)) return;
   }
 }
 
