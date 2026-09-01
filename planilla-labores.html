@@ -1446,7 +1446,12 @@ async function confirmar() {
       } catch(e) {}
     }
     if (tipo === 'Siembra') {
-      lotesPayload.forEach(l => guardarSilencioso(SHEETS_URL+'?action=guardarLote&payload='+encodeURIComponent(JSON.stringify({cliente,campo:l.campo,lote:l.lote,cultivo:l.cultivo,ha:l.ha}))));
+      // Solo guardar lotes con campo individual válido (no strings combinados "A + B + C")
+      lotesPayload.forEach(l => {
+        if (l.campo && !l.campo.includes(' + ')) {
+          guardarSilencioso(SHEETS_URL+'?action=guardarLote&payload='+encodeURIComponent(JSON.stringify({cliente,campo:l.campo,lote:l.lote,cultivo:l.cultivo,ha:l.ha})));
+        }
+      });
     }
 
     // Descontar stock
@@ -1515,7 +1520,9 @@ async function buscarOT() {
     const d0 = (labor.lotes&&labor.lotes[0]&&labor.lotes[0].detalle)||{};
     if (d0.tipoAplicacion) { const el=document.getElementById('tipoAplicacion'); if(el)el.value=d0.tipoAplicacion; }
     if (labor.cliente) { document.getElementById('cliente').value=labor.cliente; onClienteChange(); }
-    const pc = (labor.lotes&&labor.lotes[0]&&labor.lotes[0].campo)||labor.campo||'';
+    // pc: primer campo individual válido (evitar strings combinados "A + B + C")
+    const laborCampoBase = (labor.campo||'').includes(' + ') ? '' : (labor.campo||'');
+    const pc = (labor.lotes&&labor.lotes[0]&&labor.lotes[0].campo)||laborCampoBase||'';
     if (pc) document.getElementById('campo').value=pc;
 
     // Reconstruir filas con TODOS los lotes y sus productos
@@ -1525,7 +1532,8 @@ async function buscarOT() {
       filaCounter++;
       filas.push({
         id: 'f' + filaCounter,
-        campo: lote.campo || pc,
+        // No usar campo combinado como fallback; cada lote tiene su campo propio
+        campo: lote.campo || '',
         lote: String(lote.lote),
         cultivoActual: lote.cultivo || '',
         ha: lote.ha || '',
