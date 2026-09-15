@@ -175,6 +175,7 @@
 <nav class="tab-nav">
   <button class="tab-btn active" onclick="showTab('planilla')" id="tab-btn-planilla">📋 Planilla de Labores</button>
   <button class="tab-btn" onclick="showTab('stock')" id="tab-btn-stock">📦 Stock de Insumos</button>
+  <button class="tab-btn" onclick="showTab('rotacion')" id="tab-btn-rotacion">🌱 Rotación</button>
 </nav>
 
 <datalist id="productos-list"></datalist>
@@ -310,6 +311,18 @@
 </div>
 </div><!-- /tab-stock -->
 
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  TAB: ROTACIÓN                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="tab-rotacion" style="display:none;">
+<div class="container">
+  <div class="card">
+    <div style="font-weight:700;font-size:1rem;color:#1a5276;margin-bottom:14px;">🌱 Rotación de cultivos</div>
+    <div id="rot-cuerpo" style="color:#5d6d7e;font-size:0.9rem;">Abrí esta solapa para cargar los datos…</div>
+  </div>
+</div>
+</div><!-- /tab-rotacion -->
+
 <script>
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzUisWFr5PR3vDj5R9MXk6dMrvJYv7d5EIDdylWnpOD7LOf8Vaqnt1L1gODGtwLdvB43g/exec';
 
@@ -331,17 +344,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── TABS ──────────────────────────────────────────────────────
 function showTab(name) {
-  ['planilla','stock'].forEach(t => {
+  ['planilla','stock','rotacion'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
     document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
   });
   if (name === 'stock') {
     renderStock();
     renderMovimientos();
-    // Refrescar datos del servidor cada vez que se abre la solapa
     refreshStockCache().then(() => { renderStock(); renderResumenProductos(); });
   }
+  if (name === 'rotacion') {
+    cargarRotacion();
+  }
 }
+
+// ── ROTACIÓN ──────────────────────────────────────────────────
+let _rotacionCargada = false;
+
+async function cargarRotacion() {
+  if (_rotacionCargada) return;
+  const cuerpo = document.getElementById('rot-cuerpo');
+  cuerpo.innerHTML = '<div style="color:#5d6d7e">Cargando…</div>';
+  try {
+    const r = await jsonp(SHEETS_URL + '?action=maestroOperador&token=' + encodeURIComponent(staffToken));
+    if (!r.ok) throw new Error(r.error || 'Error al cargar datos');
+    renderRotacion(r.clientes || []);
+    _rotacionCargada = true;
+  } catch(e) {
+    cuerpo.innerHTML = '<div style="color:#c0392b">Error: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderRotacion(clientes) {
+  const cuerpo = document.getElementById('rot-cuerpo');
+  if (!clientes.length) {
+    cuerpo.innerHTML = '<div style="color:#5d6d7e">No tenés clientes asignados.</div>';
+    return;
+  }
+  let html = '';
+  clientes.forEach(cli => {
+    html += `<div style="margin-bottom:20px;">
+      <div style="font-weight:700;color:#1a5276;font-size:0.95rem;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #d6eaf8;">👤 ${escapeHtml(cli.cliente)}</div>`;
+    (cli.campos || []).forEach(campo => {
+      html += `<div style="margin-bottom:12px;">
+        <div style="font-size:0.78rem;font-weight:700;color:#2e86c1;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;">📍 ${escapeHtml(campo.campo)}</div>`;
+      (campo.lotes || []).forEach(lote => {
+        const id = 'rot_' + slugifyRot(cli.cliente + '_' + campo.campo + '_' + lote.lote);
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f4f8;flex-wrap:wrap;">
+          <span style="font-weight:600;font-size:0.88rem;min-width:130px;">${escapeHtml(String(lote.lote))}</span>
+          <span style="font-size:0.75rem;color:#8e9aaf;min-width:55px;">${escapeHtml(String(lote.ha||''))} ha</span>
+          <input id="inp_${id}" value="${escapeHtmlAttr(lote.cultivo)}" data-original="${escapeHtmlAttr(lote.cultivo)}"
+            data-cliente="${escapeHtmlAttr(cli.cliente)}" data-campo="${escapeHtmlAttr(campo.campo)}"
+            data-lote="${escapeHtmlAttr(String(lote.lote))}" data-ha="${escapeHtmlAttr(String(lote.ha||''))}"
+            placeholder="Cultivo actual"
+            style="flex:1;min-width:140px;padding:6px 10px;border:1.5px solid #d6eaf8;border-radius:7px;font-size:0.88rem;outline:none;"
+            oninput="this.style.borderColor='#f39c12'"
+            >
+          <button onclick="guardarLoteRotacion('${id}')"
+            style="padding:5px 14px;background:#2e86c1;color:#fff;border:none;border-radius:7px;font-size:0.8rem;font-weight:700;cursor:pointer;">
+            Guardar
+          </button>
+          <span id="ok_${id}" style="color:#27ae60;display:none;">✓</span>
+        </div>`;
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  cuerpo.innerHTML = html;
+}
+
+async function guardarLoteRotacion(id) {
+  const inp = document.getElementById('inp_' + id);
+  const ok  = document.getElementById('ok_' + id);
+  if (!inp) return;
+  const payload = JSON.stringify({
+    cliente: inp.dataset.cliente, campo: inp.dataset.campo,
+    lote: inp.dataset.lote, cultivo: inp.value.trim(), ha: inp.dataset.ha
+  });
+  try {
+    const r = await jsonp(SHEETS_URL + '?action=guardarLoteAuth&token=' + encodeURIComponent(staffToken) + '&payload=' + encodeURIComponent(payload));
+    if (!r.ok) throw new Error(r.error || 'Error al guardar');
+    inp.dataset.original = inp.value;
+    inp.style.borderColor = '#27ae60';
+    ok.style.display = 'inline';
+    setTimeout(() => { ok.style.display = 'none'; inp.style.borderColor = '#d6eaf8'; }, 2500);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function slugifyRot(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+function escapeHtmlAttr(s) { return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // ── AUTOCOMPLETE ──────────────────────────────────────────────
 const UNIDADES_PRODUCTO    = ['L/ha','kg/ha','cc/ha','g/ha'];
