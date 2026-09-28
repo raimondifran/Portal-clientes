@@ -229,24 +229,24 @@ function formatDetalleLote(det, tipo) {
     .join(' · ');
 }
 
-function renderLabores(labores) {
-  ultimasLabores = labores;
-  const el = document.getElementById('resultado');
-  const resumen = document.getElementById('resumen');
-  resumen.textContent = labores.length + ' labor(es) encontrada(s).';
-
-  // Poblar dropdown con campos individuales de los lotes (no depende del Maestro)
+function poblarDropdownCampos(labores) {
   const camposSel = document.getElementById('fCampo');
   const valorActual = camposSel.value;
   const camposSet = new Set();
   labores.forEach(labor => {
     (labor.lotes || []).forEach(l => { if (l.campo) camposSet.add(l.campo); });
-    // También incluir campo del labor si no es combinado
     if (labor.campo && !labor.campo.includes(' + ')) camposSet.add(labor.campo);
   });
   const camposOrdenados = Array.from(camposSet).sort();
   camposSel.innerHTML = '<option value="">Todos</option>' +
     camposOrdenados.map(c => `<option value="${escapeHtml(c)}"${c === valorActual ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+}
+
+function renderLabores(labores) {
+  ultimasLabores = labores;
+  const el = document.getElementById('resultado');
+  const resumen = document.getElementById('resumen');
+  resumen.textContent = labores.length + ' labor(es) encontrada(s).';
 
   if (!labores.length) {
     el.innerHTML = '<div class="empty">No hay labores cargadas para este filtro.</div>';
@@ -377,6 +377,7 @@ async function consultar() {
     const data = await jsonp(url);
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     todasLasLabores = data.labores || [];
+    poblarDropdownCampos(todasLasLabores); // siempre con TODAS las labores
     renderLabores(aplicarFiltros(todasLasLabores));
   } catch (err) {
     if (manejarError(err)) return;
