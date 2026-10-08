@@ -155,22 +155,8 @@ function jsonpScript(url) {
   });
 }
 
-async function jsonpFetch(url) {
-  const res = await fetch(url, { method: 'GET' });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
-}
-
 async function jsonp(url) {
-  try {
-    return await jsonpFetch(url);
-  } catch (errFetch) {
-    try {
-      return await jsonpScript(url);
-    } catch (errScript) {
-      throw new Error('No se pudo conectar con la base de datos (' + errFetch.message + ' / ' + errScript.message + ')');
-    }
-  }
+  return jsonpScript(url);
 }
 
 function escapeHtml(str) {
